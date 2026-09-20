@@ -232,6 +232,8 @@
   align-items: center;
   max-width: 0;
   opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   overflow: visible;
   /* ★パレットがはみ出すので visible に変更 */
   transition:
@@ -243,6 +245,8 @@
   max-width: 250px;
   /* 入力欄が収まる幅 */
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   margin-right: 8px;
 }
 
