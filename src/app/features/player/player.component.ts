@@ -868,6 +868,10 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   insertStamp(stampName: string): void {
     const stampText = `:${stampName}:`;
     const input = this.commentInputRef.nativeElement;
+    // コメントが140文字を超えないようにする
+    if (input.value.length + stampText.length > 140) {
+      return;
+    }
     const start = input.selectionStart ?? input.value.length;
     const end = input.selectionEnd ?? input.value.length;
     input.value = input.value.substring(0, start) + stampText + input.value.substring(end);
