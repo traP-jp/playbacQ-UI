@@ -796,11 +796,11 @@ describe('PlayerComponent', () => {
     const commandInputEl = fixture.debugElement.query(By.css('.command-input'))
       .nativeElement as HTMLInputElement;
     commentInputEl.value = 'Test Comment';
+    (component as any).inputCommentValue.set('Test Comment');
     commandInputEl.value = 'ue big red';
     const postCommentSpy = vi.spyOn(commentService, 'postComment').mockReturnValue(of({} as any));
     (component as any).player = { currentTime: 120 };
-    const sendButton = fixture.debugElement.query(By.css('.comment-send-btn')).nativeElement;
-    sendButton.click();
+    component.sendComment();
     expect(postCommentSpy).toHaveBeenCalledWith(
       component['videoId'],
       'Test Comment',
@@ -815,16 +815,20 @@ describe('PlayerComponent', () => {
     const commandInputEl = fixture.debugElement.query(By.css('.command-input'))
       .nativeElement as HTMLInputElement;
     (component as any).player = { currentTime: 120 };
-    commentInputEl.value = 'a'.repeat(201);
+    // maxlength属性は201文字を許可しないため、テスト用にsignalを直接設定する
+    const longComment = 'a'.repeat(201);
+    commentInputEl.value = longComment;
+    (component as any).inputCommentValue.set(longComment);
     commandInputEl.value = 'red';
-    const sendButton = fixture.debugElement.query(By.css('.comment-send-btn')).nativeElement;
-    sendButton.click();
+    component.sendComment();
     expect(alertSpy).toHaveBeenCalledWith(
       'あり得ないことが起きています。HTMLを改竄していませんか？',
     );
-    commentInputEl.value = 'Test Comment';
+    const testComment = 'Test Comment';
+    commentInputEl.value = testComment;
+    (component as any).inputCommentValue.set(testComment);
     commandInputEl.value = 'a'.repeat(129);
-    sendButton.click();
+    component.sendComment();
     expect(alertSpy).toHaveBeenCalledWith(
       'あり得ないことが起きています。HTMLを改竄していませんか？',
     );
@@ -838,7 +842,9 @@ describe('PlayerComponent', () => {
     (component as any).player = { currentTime: 120 };
     commentInputEl.value = '   ';
     commandInputEl.value = '';
-    const sendButton = fixture.debugElement.query(By.css('.comment-send-btn')).nativeElement;
+    (component as any).inputCommentValue.set('   ');
+    const sendButton = fixture.debugElement.query(By.css('.send-btn')).nativeElement;
+    fixture.detectChanges();
     sendButton.click();
     expect(alertSpy).not.toHaveBeenCalled();
     expect(commentService.postComment).not.toHaveBeenCalled();
@@ -851,12 +857,12 @@ describe('PlayerComponent', () => {
       .nativeElement as HTMLInputElement;
     (component as any).player = { currentTime: 120 };
     commentInputEl.value = 'Test Comment';
+    (component as any).inputCommentValue.set('Test Comment');
     commandInputEl.value = '';
     const postCommentSpy = vi
       .spyOn(commentService, 'postComment')
       .mockReturnValue(throwError(() => new Error('Failed')));
-    const sendButton = fixture.debugElement.query(By.css('.comment-send-btn')).nativeElement;
-    sendButton.click();
+    component.sendComment();
     expect(postCommentSpy).toHaveBeenCalledWith(component['videoId'], 'Test Comment', 120, '');
     expect(alertSpy).toHaveBeenCalledWith('コメントの投稿に失敗しました。');
   });
@@ -867,7 +873,8 @@ describe('PlayerComponent', () => {
       .nativeElement as HTMLInputElement;
     commentInputEl.value = 'Test Comment';
     commandInputEl.value = '';
-    const sendButton = fixture.debugElement.query(By.css('.comment-send-btn')).nativeElement;
+    const sendButton = fixture.debugElement.query(By.css('.send-btn')).nativeElement;
+    fixture.detectChanges();
     sendButton.click();
     expect(commentService.postComment).not.toHaveBeenCalled();
   });
@@ -1131,17 +1138,12 @@ describe('PlayerComponent', () => {
     ];
     vi.spyOn(stampService, 'getStamps').mockReturnValue(mockStamps);
     component.stampSearchQuery = 'stamp';
-    expect(component.stampRows).toEqual([
-      mockStamps.slice(0, 8),
-      mockStamps.slice(8, 10),
-    ]);
+    expect(component.stampRows).toEqual([mockStamps.slice(0, 8), mockStamps.slice(8, 10)]);
   });
   // スタンプピッカーの開閉テスト
   it('should toggle stamp picker', () => {
     vi.spyOn(stampService, 'getStamps').mockReturnValue([]);
-    const mockLoadStampsSpy = vi
-      .spyOn(stampService, 'loadStamps')
-      .mockReturnValue(of([]));
+    const mockLoadStampsSpy = vi.spyOn(stampService, 'loadStamps').mockReturnValue(of([]));
     mockLoadStampsSpy.mockClear();
     expect(component.isStampPickerOpen).toBe(false);
     // 開

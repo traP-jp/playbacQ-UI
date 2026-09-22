@@ -58,7 +58,8 @@
         <button type="button" class="stamp-btn" (click)="toggleStampPicker()">
           <mat-icon>mood</mat-icon>
         </button>
-        <button type="button" class="send-btn" (click)="sendComment()" [disabled]="!isValidComment()">
+        <button type="button" class="send-btn" (click)="sendComment()" [disabled]="!isValidComment()" title="送信"
+          aria-label="コメントを送信">
           <mat-icon>send</mat-icon>
         </button>
         @if (isStampPickerOpen){

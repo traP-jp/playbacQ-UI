@@ -648,8 +648,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s, color 0.2s;
-  transition: transform 0.1s;
+  transition: background-color 0.2s, color 0.2s, transform 0.1s;
 }
 
 .send-btn:hover {
@@ -866,11 +865,6 @@
   .comment-bar, .metadata-card {
     margin-left: 8px;
     margin-right: 8px;
-  }
-
-  .command-menu.open {
-    flex: 1 1 0% !important;
-    max-width: none !important;
   }
 
   .command-toggle-btn {
