@@ -663,6 +663,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       },
     });
     this.commentInputRef.nativeElement.value = '';
+    this.inputCommentValue.set('');
   }
 
   commentSize(): number {
@@ -873,6 +874,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     const newPos = start + stampText.length;
     input.focus();
     input.setSelectionRange(newPos, newPos);
+    this.inputCommentValue.set(input.value);
   }
 
   getStampImageUrl(stampName: string): string | null {
