@@ -24,9 +24,9 @@
   background-color: #f1f3f4;
   padding: 4px 16px;
   border-radius: 24px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   max-width: 400px;
-  /* 長くなりすぎないように */
 }
 
 .search-bar input {
@@ -35,6 +35,8 @@
   outline: none;
   flex-grow: 1;
   font-size: 1rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .app-container.embed-mode {
@@ -195,6 +197,11 @@
 }
 
 @media (max-width: 600px) {
+  .toolbar {
+    display: flex;
+    width: 100%;
+  }
+
   .app-container {
     padding: 12px;
   }
