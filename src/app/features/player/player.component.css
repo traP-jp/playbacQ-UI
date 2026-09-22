@@ -2,11 +2,8 @@
   width: 100%;
   max-width: 1000px;
   box-sizing: border-box;
-  /* 大画面でも広がりすぎないように制限 */
   margin: 0 auto;
-  /* 画面の中央に配置 */
   padding: 16px;
-  /* スマホ画面の端っこにピッタリくっつかないように余白を */
 }
 
 .video-wrapper {
@@ -127,7 +124,7 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   gap: 12px;
   box-sizing: border-box;
-  /* 要素の隙間 */
+  max-width: 100%;
 }
 
 .comment-options {
@@ -232,7 +229,7 @@
 }
 
 .command-menu.open {
-  max-width: 250px;
+  max-width: 200px;
   /* 入力欄が収まる幅 */
   opacity: 1;
   visibility: visible;
@@ -833,28 +830,69 @@
   text-overflow: ellipsis;
 }
 
+.command-comment-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.buttons-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
 /* Small screens: keep the player and comment controls inside the viewport. */
 @media (max-width: 600px) {
   .player-container {
-    padding: 8px;
+    padding: 0 !important;
   }
 
-  .comment-bar {
-    gap: 8px;
-    padding: 8px;
+  .command-comment-wrapper {
+    width: 100%;
+    flex-wrap: nowrap !important;
+  }
+
+  .video-wrapper {
+    border-radius: 0 !important;
+  }
+
+  .comment-bar, .metadata-card {
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+
+  .command-menu.open {
+    flex: 1 1 0% !important;
+    max-width: none !important;
   }
 
   .command-toggle-btn {
-    flex: 0 0 auto;
+    flex: 0 0 36px !important;
+    padding: 8px 0 !important;
   }
 
   .command-menu {
     min-width: 0;
   }
 
+  .command-menu:not(.open) {
+    flex: 0 0 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
   .command-menu.open {
-    flex: 1 1 160px;
-    max-width: none;
+    flex: 1 1 100px !important;
+    max-width: none !important;
   }
 
   .cmd-box {
@@ -863,19 +901,45 @@
   }
 
   .comment-input-wrapper {
-    flex: 1 1 calc(100% - 52px);
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
   }
 
-  .like-btn,
-  .share-btn {
-    flex: 1 1 auto;
+  .comment-input {
+    min-width: 0 !important;
+  }
+
+  ::ng-deep .plyr__controls .plyr__volume input[type="range"] {
+    display: none !important;
+  }
+
+  ::ng-deep .plyr__controls .plyr__volume {
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+  }
+
+  ::ng-deep .plyr__controls .plyr__progress {
+    flex: 1 1 0% !important;
+  }
+
+  .buttons-wrapper {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .like-btn, .share-btn {
+    flex: 1 1 auto !important;
     justify-content: center;
-    min-width: 0;
     white-space: nowrap;
   }
 
-  .metadata-card {
-    margin-top: 16px;
+  .more-menu-wrapper {
+    flex: 0 0 36px !important;
+  }
+
+  .like-text,
+  .share-text {
+    display: none;
   }
 
   .video-title {

@@ -1,7 +1,7 @@
 <div class="app-container">
 	@if (!isEmbed){
 	<div class="toolbar">
-		<h1 class="app-title" routerLink="/videos" style="cursor: pointer; user-select: none; display: inline-block;">
+		<h1 class="app-title" routerLink="/videos">
 			playbacQ</h1>
 		<div class="search-bar">
 			<input #searchInput type="text" placeholder="動画を検索..." (keyup.enter)="onSearch(searchInput.value)"
