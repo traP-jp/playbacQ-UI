@@ -12,118 +12,126 @@
   </div>
   @if (!isEmbed){
   <div class="comment-bar">
+    <span class="command-comment-wrapper">
+      <button class="command-toggle-btn" (click)="toggleCommandMenu()" title="コマンド設定">
+        <mat-icon>
+          palette
+        </mat-icon>
+      </button>
 
-    <button class="command-toggle-btn" (click)="toggleCommandMenu()" title="コマンド設定">
-      <mat-icon>
-        palette
-      </mat-icon>
-    </button>
+      <div class="command-menu" [class.open]="isCommandMenuOpen">
+        <div class="color-palette">
+          <div class="color-swatch" style="background: #FFFFFF;" title="white"
+            (click)="toggleCommand('white', commandInput)"></div>
+          <div class="color-swatch" style="background: #000000;" title="black"
+            (click)="toggleCommand('black', commandInput)">
+          </div>
+          <div class="color-swatch" style="background: #808080;" title="gray"
+            (click)="toggleCommand('gray', commandInput)">
+          </div>
+          <div class="color-swatch" style="background: #7F4001;" title="brown"
+            (click)="toggleCommand('brown', commandInput)">
+          </div>
+          <div class="color-swatch" style="background: #238F23;" title="green"
+            (click)="toggleCommand('green', commandInput)"></div>
+          <div class="color-swatch" style="background: #B2ECED;" title="cyan"
+            (click)="toggleCommand('cyan', commandInput)"></div>
+          <div class="color-swatch" style="background: #0000FF;" title="blue"
+            (click)="toggleCommand('blue', commandInput)">
+          </div>
+          <div class="color-swatch" style="background: #FFFF00;" title="yellow"
+            (click)="toggleCommand('yellow', commandInput)"></div>
+          <div class="color-swatch" style="background: #FF8000;" title="orange"
+            (click)="toggleCommand('orange', commandInput)"></div>
+          <div class="color-swatch" style="background: #FF0000;" title="red"
+            (click)="toggleCommand('red', commandInput)">
+          </div>
+        </div>
 
-    <div class="command-menu" [class.open]="isCommandMenuOpen">
-      <div class="color-palette">
-        <div class="color-swatch" style="background: #FFFFFF;" title="white"
-          (click)="toggleCommand('white', commandInput)"></div>
-        <div class="color-swatch" style="background: #000000;" title="black"
-          (click)="toggleCommand('black', commandInput)">
-        </div>
-        <div class="color-swatch" style="background: #808080;" title="gray"
-          (click)="toggleCommand('gray', commandInput)">
-        </div>
-        <div class="color-swatch" style="background: #7F4001;" title="brown"
-          (click)="toggleCommand('brown', commandInput)">
-        </div>
-        <div class="color-swatch" style="background: #238F23;" title="green"
-          (click)="toggleCommand('green', commandInput)"></div>
-        <div class="color-swatch" style="background: #B2ECED;" title="cyan"
-          (click)="toggleCommand('cyan', commandInput)"></div>
-        <div class="color-swatch" style="background: #0000FF;" title="blue"
-          (click)="toggleCommand('blue', commandInput)">
-        </div>
-        <div class="color-swatch" style="background: #FFFF00;" title="yellow"
-          (click)="toggleCommand('yellow', commandInput)"></div>
-        <div class="color-swatch" style="background: #FF8000;" title="orange"
-          (click)="toggleCommand('orange', commandInput)"></div>
-        <div class="color-swatch" style="background: #FF0000;" title="red" (click)="toggleCommand('red', commandInput)">
-        </div>
+        <input #commandInput type="text" class="command-input cmd-box" placeholder="コマンド(例:shita red small)"
+          maxlength="128">
       </div>
 
-      <input #commandInput type="text" class="command-input cmd-box" placeholder="コマンド (例: ue red small)"
-        maxlength="128">
-    </div>
+      <div class="comment-input-wrapper">
+        <input #commentInput type="text" class="comment-input" placeholder="コメント..." (keyup.enter)="sendComment()"
+          (input)="onInput($event)" maxlength="140">
+        <button type="button" class="stamp-btn" (click)="toggleStampPicker()">
+          <mat-icon>mood</mat-icon>
+        </button>
+        <button type="button" class="send-btn" (click)="sendComment()" [disabled]="!isValidComment()" title="送信"
+          aria-label="コメントを送信">
+          <mat-icon>send</mat-icon>
+        </button>
+        @if (isStampPickerOpen){
+        <div class="stamp-picker-popup" #stampActionWrapper>
 
-    <div class="comment-input-wrapper">
-      <input #commentInput type="text" class="comment-input" placeholder="コメント..." (keyup.enter)="sendComment()"
-        maxlength="140">
-      <button type="button" class="stamp-btn" (click)="toggleStampPicker()">
-        <mat-icon>mood</mat-icon>
-      </button>
-      @if (isStampPickerOpen){
-      <div class="stamp-picker-popup" #stampActionWrapper>
-
-        <!-- 検索バー -->
-        <div class="stamp-search-bar">
-          <mat-icon class="search-icon">search</mat-icon>
-          <input type="text" class="stamp-search-input" placeholder="スタンプを検索" [(ngModel)]="stampSearchQuery"
-            (click)="$event.stopPropagation()">
-          @if (stampSearchQuery){
-          <button type="button" class="search-clear-btn" (click)="stampSearchQuery = ''">
-            <mat-icon>close</mat-icon>
-          </button>
-          }
-        </div>
-        <!-- 仮想スクロール ビューポート -->
-        <cdk-virtual-scroll-viewport itemSize="44" class="stamp-viewport">
-          <div *cdkVirtualFor="let row of stampRows; trackBy: trackByRow" class="stamp-row">
-            @for (stamp of row; track stamp.id) {
-            <button type="button" class="stamp-item-btn" [title]="':' + stamp.name + ':'"
-              (click)="insertStamp(stamp.name)" (mouseenter)="onStampHover(stamp)">
-              <img [src]="'/traq-api/stamps/' + stamp.id + '/image'" [alt]="stamp.name" loading="lazy"
-                class="stamp-img" />
+          <!-- 検索バー -->
+          <div class="stamp-search-bar">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input type="text" class="stamp-search-input" placeholder="スタンプを検索" [(ngModel)]="stampSearchQuery"
+              (click)="$event.stopPropagation()">
+            @if (stampSearchQuery){
+            <button type="button" class="search-clear-btn" (click)="stampSearchQuery = ''">
+              <mat-icon>close</mat-icon>
             </button>
             }
           </div>
-          @if (stampRows.length === 0){
-          <div class="no-stamps">
-            スタンプが見つかりません
+          <!-- 仮想スクロール ビューポート -->
+          <cdk-virtual-scroll-viewport itemSize="44" class="stamp-viewport">
+            <div *cdkVirtualFor="let row of stampRows; trackBy: trackByRow" class="stamp-row">
+              @for (stamp of row; track stamp.id) {
+              <button type="button" class="stamp-item-btn" [title]="':' + stamp.name + ':'"
+                (click)="insertStamp(stamp.name)" (mouseenter)="onStampHover(stamp)">
+                <img [src]="'/traq-api/stamps/' + stamp.id + '/image'" [alt]="stamp.name" loading="lazy"
+                  class="stamp-img" />
+              </button>
+              }
+            </div>
+            @if (stampRows.length === 0){
+            <div class="no-stamps">
+              スタンプが見つかりません
+            </div>
+            }
+          </cdk-virtual-scroll-viewport>
+          <div class="stamp-preview-footer">
+            @if (hoveredStamp) {
+            <img [src]="'/traq-api/stamps/' + hoveredStamp.id + '/image'" [alt]="hoveredStamp.name"
+              class="preview-img" />
+            <span class="preview-name">:{{ hoveredStamp.name }}:</span>
+            }
           </div>
-          }
-        </cdk-virtual-scroll-viewport>
-        <div class="stamp-preview-footer">
-          @if (hoveredStamp) {
-          <img [src]="'/traq-api/stamps/' + hoveredStamp.id + '/image'" [alt]="hoveredStamp.name" class="preview-img" />
-          <span class="preview-name">:{{ hoveredStamp.name }}:</span>
-          }
         </div>
+        }
       </div>
-      }
-    </div>
-    <button class="comment-send-btn" (click)="sendComment()">送信</button>
-    <button class="like-btn" (click)="toggleLike()" [class.liked]="isLiked" title="いいね">
-      <mat-icon>{{ isLiked ? 'favorite' : 'favorite_border' }}</mat-icon>
-      <span class="like-text">いいね！</span>
-      <span class="like-count" *ngIf="likeCount > 0">{{ likeCount }}</span>
-    </button>
-    <button class="share-btn" (click)="copyShareUrl()" title="動画を共有">
-      <mat-icon>share</mat-icon>
-      <span class="share-text">traQで共有</span>
-    </button>
-
-    <div class="more-menu-wrapper" *ngIf="isVideoOwner()" #moreMenuWrapper>
-      <button class="more-options-btn" (click)="toggleMoreMenu()" title="その他のオプション">
-        <mat-icon>more_vert</mat-icon>
+    </span>
+    <span class="buttons-wrapper">
+      <button class="like-btn" (click)="toggleLike()" [class.liked]="isLiked" title="いいね">
+        <mat-icon>{{ isLiked ? 'favorite' : 'favorite_border' }}</mat-icon>
+        <span class="like-text">いいね！</span>
+        <span class="like-count" *ngIf="likeCount > 0">{{ likeCount }}</span>
+      </button>
+      <button class="share-btn" (click)="copyShareUrl()" title="動画を共有">
+        <mat-icon>share</mat-icon>
+        <span class="share-text">traQで共有</span>
       </button>
 
-      <div class="more-popup" *ngIf="isMoreMenuOpen">
-        <button class="delete-video-btn" (click)="deleteVideo()">
-          <mat-icon>delete</mat-icon>
-          <span>動画を削除</span>
+      <div class="more-menu-wrapper" *ngIf="isVideoOwner()" #moreMenuWrapper>
+        <button class="more-options-btn" (click)="toggleMoreMenu()" title="その他のオプション">
+          <mat-icon>more_vert</mat-icon>
         </button>
-        <button class="edit-video-btn" (click)="editVideo()">
-          <mat-icon>edit</mat-icon>
-          <span>動画を編集</span>
-        </button>
+
+        <div class="more-popup" *ngIf="isMoreMenuOpen">
+          <button class="delete-video-btn" (click)="deleteVideo()">
+            <mat-icon>delete</mat-icon>
+            <span>動画を削除</span>
+          </button>
+          <button class="edit-video-btn" (click)="editVideo()">
+            <mat-icon>edit</mat-icon>
+            <span>動画を編集</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </span>
   </div>
 
   <mat-card *ngIf="videoMetadata" class="metadata-card">

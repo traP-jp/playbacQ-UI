@@ -5,6 +5,12 @@
   /* 画面の中央に配置 */
 }
 
+.app-title {
+  display: inline-block;
+  cursor: pointer;
+  user-select: none;
+}
+
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -18,9 +24,9 @@
   background-color: #f1f3f4;
   padding: 4px 16px;
   border-radius: 24px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   max-width: 400px;
-  /* 長くなりすぎないように */
 }
 
 .search-bar input {
@@ -29,6 +35,8 @@
   outline: none;
   flex-grow: 1;
   font-size: 1rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .app-container.embed-mode {
@@ -43,24 +51,6 @@
 .upload-btn {
   white-space: nowrap;
   flex-shrink: 0;
-}
-
-@media (max-width: 600px) {
-  .upload-btn-text {
-    display: none;
-  }
-  .upload-btn {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    padding: 0;
-    min-width: 48px;
-    width: 48px;
-  }
-  .upload-btn mat-icon {
-    margin: 0;
-  }
 }
 
 .user-icon {
@@ -116,6 +106,7 @@
   transition: background-color 0.2s;
   white-space: nowrap;
 }
+
 .notifications-btn:hover {
   background-color: #f1f3f4;
 }
@@ -202,5 +193,43 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .toolbar {
+    display: flex;
+    width: 100%;
+  }
+
+  .app-container {
+    padding: 12px;
+  }
+
+  .app-title {
+    display: none;
+  }
+
+  .upload-btn-text {
+    display: none;
+  }
+
+  .upload-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 0;
+    min-width: 48px;
+    width: 48px;
+  }
+
+  .upload-btn mat-icon {
+    margin: 0;
+  }
+
+  .user-icon {
+    width: 36px;
+    height: 36px;
   }
 }
