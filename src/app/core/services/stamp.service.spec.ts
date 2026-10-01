@@ -132,7 +132,7 @@ describe('StampService', () => {
     expect(imageReq.request.method).toBe('GET');
     imageReq.flush(new ArrayBuffer(0));
 
-    expect(stampData1?.staticImage?.src).toContain('/traq-api/stamps/stamp-id-1/image');
+    expect(stampData1?.staticImage?.src).toMatch(/^blob:/);
 
     // Second call should return cached instance without additional HTTP request
     const stampData2 = service.getStampImage('stamp1');
@@ -148,6 +148,7 @@ describe('StampService', () => {
     expect(service.getStampURL('stamp2')).toBe('/traq-api/stamps/stamp-id-2/image');
     expect(service.getStampURL('unknown-stamp')).toBeNull();
   });
+
   it('should return static image for non-animated stamp', () => {
     service.loadStamps().subscribe();
     const req = httpTestingController.expectOne('/traq-api/stamps');
@@ -166,14 +167,16 @@ describe('StampService', () => {
     const stampData = service.getStampImage('stamp1');
     expect(stampData).toBeTruthy();
     const imageReq = httpTestingController.expectOne('/traq-api/stamps/stamp-id-1/image');
-    imageReq.flush(new ArrayBuffer(8));
+    const gifBuffer = new Uint8Array([0x47, 0x49, 0x46, 0, 0, 0, 0, 0]).buffer;
+    imageReq.flush(gifBuffer);
 
     expect(stampData?.isAnimated).toBe(false);
     expect(stampData?.staticImage).toBeInstanceOf(HTMLImageElement);
-    expect(stampData?.staticImage?.src).toContain('/traq-api/stamps/stamp-id-1/image');
+    expect(stampData?.staticImage?.src).toMatch(/^blob:/);
     expect(stampData?.frames).toBeUndefined();
   });
-  it('should fallback to static image when image HTTP request fails', () => {
+
+  it('should remove from cache when image HTTP request fails', () => {
     service.loadStamps().subscribe();
     const req = httpTestingController.expectOne('/traq-api/stamps');
     req.flush(mockStamps);
@@ -184,11 +187,11 @@ describe('StampService', () => {
     const imageReq = httpTestingController.expectOne('/traq-api/stamps/stamp-id-1/image');
     imageReq.flush(new ArrayBuffer(0), { status: 404, statusText: 'Not Found' });
 
-    expect(stampData?.isAnimated).toBe(false);
-    expect(stampData?.staticImage).toBeInstanceOf(HTMLImageElement);
-    expect(stampData?.staticImage?.src).toContain('/traq-api/stamps/stamp-id-1/image');
-    expect(stampData?.frames).toBeUndefined();
+    // キャッシュから削除されたため、次回呼び出し時に新しくリクエストが作成される
+    service.getStampImage('stamp1');
+    httpTestingController.expectOne('/traq-api/stamps/stamp-id-1/image');
   });
+
   it('should get animated stamp image when available', async () => {
     service.loadStamps().subscribe();
     const req = httpTestingController.expectOne('/traq-api/stamps');
@@ -220,7 +223,8 @@ describe('StampService', () => {
     expect(stampData?.isAnimated).toBe(false);
 
     const imageReq = httpTestingController.expectOne('/traq-api/stamps/stamp-id-1/image');
-    imageReq.flush(new ArrayBuffer(8));
+    const gifBuffer = new Uint8Array([0x47, 0x49, 0x46, 0, 0, 0, 0, 0]).buffer;
+    imageReq.flush(gifBuffer);
 
     await vi.waitFor(() => {
       expect(stampData?.isAnimated).toBe(true);
@@ -231,5 +235,21 @@ describe('StampService', () => {
     expect(stampData?.frames?.[1].delay).toBe(150);
     expect(stampData?.frames?.[2].delay).toBe(200); // default delay
     expect(stampData?.totalDuration).toBe(450);
+  });
+
+  it('should get blob url and cache it with getStampBlobUrl', () => {
+    let url1: string | undefined;
+    service.getStampBlobUrl('stamp-id-1').subscribe((url) => (url1 = url));
+
+    const imageReq = httpTestingController.expectOne('/traq-api/stamps/stamp-id-1/image');
+    expect(imageReq.request.method).toBe('GET');
+    imageReq.flush(new Blob(['test-blob']));
+
+    expect(url1).toMatch(/^blob:/);
+
+    let url2: string | undefined;
+    service.getStampBlobUrl('stamp-id-1').subscribe((url) => (url2 = url));
+    httpTestingController.expectNone('/traq-api/stamps/stamp-id-1/image');
+    expect(url2).toBe(url1);
   });
 });

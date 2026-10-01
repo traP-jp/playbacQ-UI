@@ -6,9 +6,11 @@
 
     <canvas #commentCanvas class="danmaku-canvas"></canvas>
 
-    <div *ngIf="isLoading" class="spinner-overlay">
+    @if (isLoading) {
+    <div class="spinner-overlay">
       <mat-spinner diameter="50"></mat-spinner>
     </div>
+    }
   </div>
   @if (!isEmbed){
   <div class="comment-bar">
@@ -77,17 +79,16 @@
             }
           </div>
           <!-- 仮想スクロール ビューポート -->
-          <cdk-virtual-scroll-viewport itemSize="44" class="stamp-viewport">
-            <div *cdkVirtualFor="let row of stampRows; trackBy: trackByRow" class="stamp-row">
+          <cdk-virtual-scroll-viewport itemSize="44" minBufferPx="44" maxBufferPx="88" class="stamp-viewport">
+            <div *cdkVirtualFor="let row of stampRows(); trackBy: trackByRow" class="stamp-row">
               @for (stamp of row; track stamp.id) {
               <button type="button" class="stamp-item-btn" [title]="':' + stamp.name + ':'"
                 (click)="insertStamp(stamp.name)" (mouseenter)="onStampHover(stamp)">
-                <img [src]="'/traq-api/stamps/' + stamp.id + '/image'" [alt]="stamp.name" loading="lazy"
-                  class="stamp-img" />
+                <app-stamp-image [stampId]="stamp.id" [alt]="stamp.name"></app-stamp-image>
               </button>
               }
             </div>
-            @if (stampRows.length === 0){
+            @if (stampRows().length === 0){
             <div class="no-stamps">
               スタンプが見つかりません
             </div>
@@ -108,19 +109,21 @@
       <button class="like-btn" (click)="toggleLike()" [class.liked]="isLiked" title="いいね">
         <mat-icon>{{ isLiked ? 'favorite' : 'favorite_border' }}</mat-icon>
         <span class="like-text">いいね！</span>
-        <span class="like-count" *ngIf="likeCount > 0">{{ likeCount }}</span>
+        @if (likeCount > 0) {
+        <span class="like-count">{{ likeCount }}</span>
+        }
       </button>
       <button class="share-btn" (click)="copyShareUrl()" title="動画を共有">
         <mat-icon>share</mat-icon>
         <span class="share-text">traQで共有</span>
       </button>
-
-      <div class="more-menu-wrapper" *ngIf="isVideoOwner()" #moreMenuWrapper>
+      @if (isVideoOwner()) {
+      <div class="more-menu-wrapper" #moreMenuWrapper>
         <button class="more-options-btn" (click)="toggleMoreMenu()" title="その他のオプション">
           <mat-icon>more_vert</mat-icon>
         </button>
-
-        <div class="more-popup" *ngIf="isMoreMenuOpen">
+        @if (isMoreMenuOpen) {
+        <div class="more-popup">
           <button class="delete-video-btn" (click)="deleteVideo()">
             <mat-icon>delete</mat-icon>
             <span>動画を削除</span>
@@ -130,11 +133,14 @@
             <span>動画を編集</span>
           </button>
         </div>
+        }
       </div>
+      }
     </span>
   </div>
 
-  <mat-card *ngIf="videoMetadata" class="metadata-card">
+  @if (videoMetadata) {
+  <mat-card class="metadata-card">
     <mat-card-header>
       <mat-card-title class="video-title">{{ videoMetadata.title }}</mat-card-title>
       <mat-card-subtitle class="video-stats"
@@ -157,7 +163,9 @@
       <mat-card-subtitle style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
         <button class="uploader" type="button" [title]="videoMetadata.user_id" [routerLink]="['/']"
           [queryParams]="{ userId: videoMetadata.user_id }">
-          <img *ngIf="userIconUrl" class="uploader-icon" [src]="userIconUrl" alt="Uploader Icon">
+          @if (userIconUrl) {
+          <img class="uploader-icon" [src]="userIconUrl" alt="Uploader Icon">
+          }
           {{ videoMetadata.user_id }}
         </button>
       </mat-card-subtitle>
@@ -170,13 +178,15 @@
             @for (tag of tags; track tag.tag_id) {
             <mat-chip class="hoverable-tag" [routerLink]="['/']" [queryParams]="{ tag: tag.name }"
               style="display: flex;cursor: pointer;align-items: center;">
-              <span *ngIf="tag.status === 1" class="material-icons"
-                style="font-size: 14px; vertical-align: middle;">lock</span>
+              @if (tag.status === 1) {
+              <span class="material-icons" style="font-size: 14px; vertical-align: middle;">lock</span>
+              }
               {{ tag.name }}
-              <mat-icon *ngIf="tag.status !== 1" class="remove-icon"
-                (click)="$event.preventDefault(); $event.stopPropagation(); removeTag(tag)">
+              @if (tag.status !== 1) {
+              <mat-icon class="remove-icon" (click)="$event.preventDefault(); $event.stopPropagation(); removeTag(tag)">
                 clear
               </mat-icon>
+              }
             </mat-chip>
             }
           </mat-chip-set>
@@ -185,7 +195,8 @@
             <button mat-icon-button class="add-tag-btn" (click)="openTagInput()" title="タグを追加">
               <mat-icon>add_circle_outline</mat-icon>タグを追加
             </button>
-            <div class="tag-popup" *ngIf="isTagInputOpen">
+            @if (isTagInputOpen) {
+            <div class="tag-popup">
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
                 <mat-label>タグを検索・追加</mat-label>
                 <input type="text" matInput [matAutocomplete]="auto" (input)="onTagInput($event)"
@@ -198,6 +209,7 @@
                 </mat-autocomplete>
               </mat-form-field>
             </div>
+            }
           </div>
         </div>
       </mat-card-subtitle>
@@ -208,5 +220,6 @@
       <p class="description" [innerHTML]="videoMetadata.description | linkify">{{ videoMetadata.description }}</p>
     </mat-card-content>
   </mat-card>
+  }
   }
 </div>

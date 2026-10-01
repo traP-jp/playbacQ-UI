@@ -1,8 +1,7 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Stamp } from '../models/stamp.model';
+import { Stamp, AnimatedStampData } from '../models/stamp.model';
 import { parseGIF, decompressFrames } from 'gifuct-js';
-import { StampFrame, AnimatedStampData } from '../models/stamp.model';
 import { Observable, of } from 'rxjs';
 import { map, catchError, shareReplay } from 'rxjs/operators';
 
@@ -17,6 +16,7 @@ export class StampService {
   private stampMap = new Map<string, string>();
   private stampCache = new Map<string, AnimatedStampData>();
   private loadStamps$?: Observable<Stamp[]>;
+  private blobUrlCache = new Map<string, string>();
 
   loadStamps(): Observable<Stamp[]> {
     if (this.stampsSignal().length > 0) return of(this.stampsSignal());
@@ -59,44 +59,60 @@ export class StampService {
       .get(`${this.traQApiUrl}/${stampId}/image`, { responseType: 'arraybuffer' })
       .subscribe({
         next: async (buffer) => {
-          try {
-            const gif = parseGIF(buffer);
-            const frames = decompressFrames(gif, true);
+          if (this.isGifFormat(buffer)) {
+            try {
+              const gif = parseGIF(buffer);
+              const frames = decompressFrames(gif, true);
 
-            // アニメーションGIF
-            if (frames.length > 1) {
-              const stampFrames: StampFrame[] = [];
-              let totalDuration = 0;
-
-              for (const frame of frames) {
-                const imageData = new ImageData(
-                  new Uint8ClampedArray(frame.patch),
-                  frame.dims.width,
-                  frame.dims.height,
+              if (frames.length > 1) {
+                const stampFrames = await Promise.all(
+                  frames.map(async (frame) => {
+                    const imageData = new ImageData(
+                      new Uint8ClampedArray(frame.patch),
+                      frame.dims.width,
+                      frame.dims.height,
+                    );
+                    const bitmap = await createImageBitmap(imageData);
+                    const delay = frame.delay || 200;
+                    return { bitmap, delay };
+                  }),
                 );
-                const bitmap = await createImageBitmap(imageData);
-                const delay = frame.delay || 200;
-                stampFrames.push({ bitmap, delay });
-                totalDuration += delay;
+
+                const totalDuration = stampFrames.reduce((sum, f) => sum + f.delay, 0);
+
+                cacheEntry.isAnimated = true;
+                cacheEntry.frames = stampFrames;
+                cacheEntry.totalDuration = totalDuration;
+                return;
               }
-              cacheEntry.isAnimated = true;
-              cacheEntry.frames = stampFrames;
-              cacheEntry.totalDuration = totalDuration;
-            } else {
-              // 静止画
-              this.loadStaticImage(stampId, cacheEntry);
+            } catch {
+              // GIF パースに失敗した場合は静止画処理へGO
             }
-          } catch {
-            // 静止画
-            this.loadStaticImage(stampId, cacheEntry);
           }
+
+          // 静止画(PNG/JPEG等)
+          this.createStaticImageFromBuffer(buffer, cacheEntry);
         },
         error: () => {
-          // 静止画
-          this.loadStaticImage(stampId, cacheEntry);
+          this.stampCache.delete(stampId);
         },
       });
     return cacheEntry;
+  }
+
+  getStampBlobUrl(stampId: string): Observable<string> {
+    const cached = this.blobUrlCache.get(stampId);
+    if (cached) {
+      return of(cached);
+    }
+    return this.http.get(`${this.traQApiUrl}/${stampId}/image`, { responseType: 'blob' }).pipe(
+      map((blob) => {
+        const url = URL.createObjectURL(blob);
+        this.blobUrlCache.set(stampId, url);
+        return url;
+      }),
+      shareReplay(1),
+    );
   }
 
   getStampURL(stampName: string): string | null {
@@ -105,9 +121,18 @@ export class StampService {
     return `${this.traQApiUrl}/${stampId}/image`;
   }
 
-  private loadStaticImage(stampId: string, cacheEntry: AnimatedStampData) {
+  // バイナリの先頭3バイトが GIF ('G', 'I', 'F') か判定する
+  private isGifFormat(buffer: ArrayBuffer): boolean {
+    if (buffer.byteLength < 3) return false;
+    const header = new Uint8Array(buffer, 0, 3);
+    return header[0] === 0x47 && header[1] === 0x49 && header[2] === 0x46;
+  }
+
+  private createStaticImageFromBuffer(buffer: ArrayBuffer, cacheEntry: AnimatedStampData) {
+    const blob = new Blob([buffer]);
+    const objectUrl = URL.createObjectURL(blob);
     const img = new Image();
-    img.src = `${this.traQApiUrl}/${stampId}/image`;
+    img.src = objectUrl;
     cacheEntry.isAnimated = false;
     cacheEntry.staticImage = img;
   }
