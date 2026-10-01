@@ -118,7 +118,13 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   isLiked = false;
   likeCount = 0;
   userIconUrl: string | null = null;
-  stampSearchQuery = '';
+  private _stampSearchQuery = signal<string>('');
+  get stampSearchQuery(): string {
+    return this._stampSearchQuery();
+  }
+  set stampSearchQuery(value: string) {
+    this._stampSearchQuery.set(value);
+  }
   hoveredStamp: Stamp | null = null;
 
   inputCommentValue = signal<string>('');
