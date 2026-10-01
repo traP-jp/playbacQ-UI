@@ -102,6 +102,7 @@ describe('PlayerComponent', () => {
       getStamps: vi.fn().mockReturnValue([]),
       getStampImage: vi.fn().mockReturnValue(null),
       getStampURL: vi.fn().mockReturnValue(null),
+      getStampBlobUrl: vi.fn().mockReturnValue(of('blob:mock-url')),
     };
     const mockMatDialog = {
       open: vi.fn(),
@@ -1131,7 +1132,7 @@ describe('PlayerComponent', () => {
     ];
     vi.spyOn(stampService, 'getStamps').mockReturnValue(mockStamps);
     component.stampSearchQuery = 'stamp';
-    expect(component.stampRows).toEqual([
+    expect(component.stampRows()).toEqual([
       mockStamps.slice(0, 8),
       mockStamps.slice(8, 10),
     ]);

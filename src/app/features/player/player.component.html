@@ -72,13 +72,12 @@
           }
         </div>
         <!-- 仮想スクロール ビューポート -->
-        <cdk-virtual-scroll-viewport itemSize="44" class="stamp-viewport">
+        <cdk-virtual-scroll-viewport itemSize="44" minBufferPx="44" maxBufferPx="88" class="stamp-viewport">
           <div *cdkVirtualFor="let row of stampRows; trackBy: trackByRow" class="stamp-row">
             @for (stamp of row; track stamp.id) {
             <button type="button" class="stamp-item-btn" [title]="':' + stamp.name + ':'"
               (click)="insertStamp(stamp.name)" (mouseenter)="onStampHover(stamp)">
-              <img [src]="'/traq-api/stamps/' + stamp.id + '/image'" [alt]="stamp.name" loading="lazy"
-                class="stamp-img" />
+              <app-stamp-image [stampId]="stamp.id" [alt]="stamp.name"></app-stamp-image>
             </button>
             }
           </div>

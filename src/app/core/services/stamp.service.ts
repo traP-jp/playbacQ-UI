@@ -16,6 +16,7 @@ export class StampService {
   private stampMap = new Map<string, string>();
   private stampCache = new Map<string, AnimatedStampData>();
   private loadStamps$?: Observable<Stamp[]>;
+  private blobUrlCache = new Map<string, string>();
 
   loadStamps(): Observable<Stamp[]> {
     if (this.stampsSignal().length > 0) return of(this.stampsSignal());
@@ -97,6 +98,21 @@ export class StampService {
         },
       });
     return cacheEntry;
+  }
+
+  getStampBlobUrl(stampId: string): Observable<string> {
+    const cached = this.blobUrlCache.get(stampId);
+    if (cached) {
+      return of(cached);
+    }
+    return this.http.get(`${this.traQApiUrl}/${stampId}/image`, { responseType: 'blob' }).pipe(
+      map((blob) => {
+        const url = URL.createObjectURL(blob);
+        this.blobUrlCache.set(stampId, url);
+        return url;
+      }),
+      shareReplay(1),
+    );
   }
 
   getStampURL(stampName: string): string | null {

@@ -4,6 +4,7 @@ import {
   ViewChild,
   ElementRef,
   OnInit,
+  computed,
   OnDestroy,
   ChangeDetectorRef,
   AfterViewInit,
@@ -39,6 +40,7 @@ import { environment } from '../../../environments/environment';
 import { Comment } from './comment';
 import { EditVideoDialogComponent } from './edit-video-dialog.component';
 import { LinkifyPipe } from '../../shared/pipes/linkify-pipe';
+import { StampImageComponent } from './stamp-image.component';
 import * as Plyr_ from 'plyr';
 import type PlyrType from 'plyr';
 const Plyr = (Plyr_ as any).default || Plyr_;
@@ -60,6 +62,7 @@ type Plyr = PlyrType;
     FormsModule,
     LinkifyPipe,
     RouterLink,
+    StampImageComponent,
     MatSnackBarModule,
   ],
   standalone: true,
@@ -831,18 +834,16 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     );
   }
 
-  get stampRows(): Stamp[][] {
+  stampRows = computed(() => {
     const query = this.stampSearchQuery.trim().toLowerCase();
     const stamps = this.stampService.getStamps();
-    const filtered = query
-      ? stamps.filter((s) => s.name.toLowerCase().includes(query))
-      : stamps;
+    const filtered = query ? stamps.filter((s) => s.name.toLowerCase().includes(query)) : stamps;
     const rows: Stamp[][] = [];
     for (let i = 0; i < filtered.length; i += this.StampRowNum) {
       rows.push(filtered.slice(i, i + this.StampRowNum));
     }
     return rows;
-  }
+  });
 
   toggleStampPicker(): void {
     this.isStampPickerOpen = !this.isStampPickerOpen;
