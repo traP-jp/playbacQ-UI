@@ -9,6 +9,7 @@ import {
   ChangeDetectorRef,
   AfterViewInit,
   HostListener,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
@@ -119,6 +120,8 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   userIconUrl: string | null = null;
   stampSearchQuery = '';
   hoveredStamp: Stamp | null = null;
+
+  inputCommentValue = signal<string>('');
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
@@ -624,12 +627,24 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     cmdInput.value = currentCmds.join(' ');
   }
 
+  onInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.inputCommentValue.set(input.value);
+  }
+
+  isValidComment(): boolean {
+    if (!this.player) {
+      return false;
+    }
+    return this.inputCommentValue().trim().length > 0 && this.inputCommentValue().length <= 140;
+  }
+
   sendComment(): void {
     if (!this.player) {
       console.warn('Player is not initialized yet. Cannot send comment.');
       return;
     }
-    const commentText = this.commentInputRef.nativeElement.value.trim();
+    const commentText = this.inputCommentValue().trim();
     const commandText = this.commandInputRef.nativeElement.value.trim();
     if (!commentText) {
       return;
@@ -651,6 +666,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       },
     });
     this.commentInputRef.nativeElement.value = '';
+    this.inputCommentValue.set('');
   }
 
   commentSize(): number {
@@ -855,12 +871,17 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   insertStamp(stampName: string): void {
     const stampText = `:${stampName}:`;
     const input = this.commentInputRef.nativeElement;
+    // コメントが140文字を超えないようにする
+    if (input.value.length + stampText.length > 140) {
+      return;
+    }
     const start = input.selectionStart ?? input.value.length;
     const end = input.selectionEnd ?? input.value.length;
     input.value = input.value.substring(0, start) + stampText + input.value.substring(end);
     const newPos = start + stampText.length;
     input.focus();
     input.setSelectionRange(newPos, newPos);
+    this.inputCommentValue.set(input.value);
   }
 
   getStampImageUrl(stampName: string): string | null {
