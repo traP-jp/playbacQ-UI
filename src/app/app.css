@@ -1,3 +1,17 @@
+:root {
+  --bg-color: white;
+  --text-color: black;
+  ---primary-color: #007bff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #121212;
+    --text-color: #e0e0e0;
+    --primary-color: #1e88e5;
+  }
+}
+
 .app-container {
   padding: 24px;
   max-width: 1200px;
@@ -21,7 +35,7 @@
 .search-bar {
   display: flex;
   align-items: center;
-  background-color: #f1f3f4;
+  background-color: light-dark(#f1f3f4, #333);
   padding: 4px 16px;
   border-radius: 24px;
   flex: 1;
@@ -59,7 +73,7 @@
   border-radius: 50%;
   object-fit: cover;
   margin: auto;
-  border: #000 solid 1px;
+  border: light-dark(#000, #ccc) solid 1px;
   cursor: pointer;
 }
 
@@ -82,7 +96,7 @@
   top: 120%;
   right: 10%;
   margin-bottom: 12px;
-  background-color: white;
+  background-color: light-dark(#ffffff, #333333);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 100;
@@ -91,7 +105,7 @@
   animation: fadeIn 0.2s ease-out;
 }
 
-.notifications-btn {
+.home-btn {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -107,8 +121,8 @@
   white-space: nowrap;
 }
 
-.notifications-btn:hover {
-  background-color: #f1f3f4;
+.home-btn:hover {
+  background-color: light-dark(#f1f3f4, #444);
 }
 
 .uploaded-videos-btn {
@@ -128,7 +142,7 @@
 }
 
 .uploaded-videos-btn:hover {
-  background-color: #f1f3f4;
+  background-color: light-dark(#f1f3f4, #555);
 }
 
 .liked-videos-btn {
@@ -148,7 +162,7 @@
 }
 
 .liked-videos-btn:hover {
-  background-color: #f1f3f4;
+  background-color: light-dark(#f1f3f4, #555);
 }
 
 .settings-btn {
@@ -168,7 +182,7 @@
 }
 
 .settings-btn:hover {
-  background-color: #f1f3f4;
+  background-color: light-dark(#f1f3f4, #555);
 }
 
 .version-info {
@@ -180,7 +194,7 @@
   background: none;
   border: none;
   font-size: 0.875rem;
-  color: #666;
+  color: light-dark(#666, #999);
   margin-top: 4px;
 }
 

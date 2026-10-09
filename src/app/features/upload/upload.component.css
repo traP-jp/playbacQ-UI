@@ -11,18 +11,18 @@
   /* 今どきの角丸 */
   padding: 60px 20px;
   text-align: center;
-  background-color: #f8fcfd;
+  background-color: light-dark(#f8fcfd, #333);
   /* ほんのり青みがかった白 */
-  color: #555;
+  color: light-dark(#555, #ccc);
   transition: all 0.3s ease;
   /* 状態が変わる時に0.3秒かけてフワッと変化させる */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.3));
   /* うっすらとした影で立体感を */
 }
 
 /* ファイルをドラッグして重ねている時のスタイル (.dragging クラスが付与された時) */
 .drop-zone.dragging {
-  background-color: #e3f2fd;
+  background-color: light-dark(#e3f2fd, #444);
   /* 背景色を少し濃くする */
   border-color: #2196f3;
   /* 枠線も濃くして強調 */

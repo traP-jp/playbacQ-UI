@@ -75,6 +75,10 @@ export class App {
     this.isOpenUserMenu = !this.isOpenUserMenu;
   }
 
+  closeUserMenu() {
+    this.isOpenUserMenu = false;
+  }
+
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     if (this.isOpenUserMenu && this.userMenuWrapperRef) {
