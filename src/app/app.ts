@@ -14,6 +14,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from './core/services/auth.service';
 import { UserService } from './core/services/user.service';
+import { ThemeService } from './core/services/theme.service';
 import { filter } from 'rxjs/operators';
 
 @Component({
@@ -30,6 +31,7 @@ export class App {
   dialog = inject(MatDialog);
   authService = inject(AuthService);
   userService = inject(UserService);
+  themeService = inject(ThemeService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   isEmbed = false;
@@ -73,6 +75,10 @@ export class App {
 
   toggleUserMenu() {
     this.isOpenUserMenu = !this.isOpenUserMenu;
+  }
+
+  closeUserMenu() {
+    this.isOpenUserMenu = false;
   }
 
   @HostListener('document:click', ['$event'])

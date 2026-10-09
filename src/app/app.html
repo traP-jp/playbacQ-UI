@@ -11,7 +11,7 @@
 			</button>
 		</div>
 		<span style="display:flex; align-items: center; gap: 16px;">
-			<button mat-flat-button class="upload-btn" color="primary" (click)="openUploadDialog()">
+			<button mat-flat-button color="primary" class="upload-btn" (click)="openUploadDialog()">
 				<mat-icon>upload</mat-icon>
 				<span class="upload-btn-text">動画を投稿</span>
 			</button>
@@ -20,22 +20,27 @@
 				<img [src]="iconUrl" alt="User Icon" class="user-icon" (click)="toggleUserMenu()">
 				@if (isOpenUserMenu) {
 				<div class="user-menu">
-					<button mat-menu-item class="notifications-btn">
-						<mat-icon>notifications</mat-icon> 通知
+					<button mat-menu-item class="home-btn" [routerLink]="['/']" (click)="closeUserMenu()">
+						<mat-icon>home</mat-icon> ホーム
 					</button>
 					<button mat-menu-item class="uploaded-videos-btn" [routerLink]="['/']"
-						[queryParams]="{ userId: loggedInUserId }">
+						[queryParams]="{ userId: loggedInUserId }" (click)="closeUserMenu()">
 						<mat-icon>video_library</mat-icon> 投稿した動画
 					</button>
 					<button mat-menu-item class="liked-videos-btn">
 						<mat-icon>favorite</mat-icon> いいねした動画
 					</button>
-					<button mat-menu-item class="settings-btn">
-						<mat-icon>settings</mat-icon> 設定
+					<button mat-menu-item class="settings-btn" (click)="themeService.toggleTheme();">
+						@if (themeService.isDarkMode()) {
+						<mat-icon>dark_mode</mat-icon>
+						}@else{
+						<mat-icon>light_mode</mat-icon>
+						}
+						テーマを変更
 					</button>
 					<div class="version-info">
 						playbacQ<br>
-						ver 0.0.0
+						ver 0.0.1
 					</div>
 				</div>
 				}

@@ -17,7 +17,7 @@
 .toolbar h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: #333;
+  color: light-dark(#333, #ccc);
 }
 
 .video-grid {
@@ -32,7 +32,8 @@
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
-  background: #fff;
+  background: light-dark(#fff, #333);
+  border: 1px solid light-dark(#ddd, #444);
   border-radius: 8px;
   overflow: hidden;
   display: flex;
@@ -42,7 +43,7 @@
 /* ホバー時に少し上に浮き上がって影が濃くなるアニメーション */
 .video-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 16px light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15));
 }
 
 /* サムネイル画像を16:9に強制固定！ */
@@ -69,7 +70,7 @@
   font-weight: bold;
   line-height: 1.4;
   margin-bottom: 12px;
-  color: #111;
+  color: light-dark(#111, #ccc);
 
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -83,7 +84,7 @@
   justify-content: space-between;
   align-items: center;
   font-size: 0.85rem;
-  color: #666;
+  color: light-dark(#666, #999);
 }
 
 .empty-state {
@@ -91,7 +92,7 @@
   /* グリッド全体を使って中央表示 */
   text-align: center;
   padding: 40px;
-  color: #888;
+  color: light-dark(#888, #666);
   font-size: 1.2rem;
 }
 
@@ -105,7 +106,7 @@
 .title-and-sort h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: #333;
+  color: light-dark(#333, #ccc);
 }
 
 .sort-select {
@@ -159,5 +160,5 @@
 
 .uploader:hover {
   text-decoration: underline;
-  background-color: #eee;
+  background-color: light-dark(#eee, #444);
 }
