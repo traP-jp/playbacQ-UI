@@ -1,15 +1,7 @@
 :root {
-  --bg-color: white;
-  --text-color: black;
-  ---primary-color: #007bff;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-color: #121212;
-    --text-color: #e0e0e0;
-    --primary-color: #1e88e5;
-  }
+  --bg-color: light-dark(white, #121212);
+  --text-color: light-dark(black, #e0e0e0);
+  --primary-color: light-dark(#007bff, #1e88e5);
 }
 
 .app-container {

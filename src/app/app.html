@@ -24,18 +24,23 @@
 						<mat-icon>home</mat-icon> ホーム
 					</button>
 					<button mat-menu-item class="uploaded-videos-btn" [routerLink]="['/']"
-						[queryParams]="{ userId: loggedInUserId }">
+						[queryParams]="{ userId: loggedInUserId }" (click)="closeUserMenu()">
 						<mat-icon>video_library</mat-icon> 投稿した動画
 					</button>
 					<button mat-menu-item class="liked-videos-btn">
 						<mat-icon>favorite</mat-icon> いいねした動画
 					</button>
-					<button mat-menu-item class="settings-btn">
-						<mat-icon>settings</mat-icon> 設定
+					<button mat-menu-item class="settings-btn" (click)="themeService.toggleTheme();">
+						@if (themeService.isDarkMode()) {
+						<mat-icon>dark_mode</mat-icon>
+						}@else{
+						<mat-icon>light_mode</mat-icon>
+						}
+						テーマを変更
 					</button>
 					<div class="version-info">
 						playbacQ<br>
-						ver 0.0.0
+						ver 0.0.1
 					</div>
 				</div>
 				}
