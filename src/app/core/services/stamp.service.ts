@@ -15,8 +15,6 @@ export class StampService {
   private stampsSignal = signal<Stamp[]>([]);
   private stampMap = new Map<string, string>();
   private stampCache = new Map<string, AnimatedStampData>();
-  private stampRetryAfter = new Map<string, number>();
-  private readonly stampRetryDelayMs = 30_000;
   private loadStamps$?: Observable<Stamp[]>;
   private blobUrlCache = new Map<string, string>();
 
@@ -58,10 +56,6 @@ export class StampService {
       }
       return cached;
     }
-    const retryAt = this.stampRetryAfter.get(stampId);
-    if (retryAt && Date.now() < retryAt) return null;
-    this.stampRetryAfter.delete(stampId);
-
     const cacheEntry: AnimatedStampData = { isAnimated: false };
     this.stampCache.set(stampId, cacheEntry);
 
@@ -167,6 +161,5 @@ export class StampService {
 
   private evictStamp(stampId: string, cacheEntry: AnimatedStampData): void {
     if (this.stampCache.get(stampId) === cacheEntry) this.stampCache.delete(stampId);
-    if (stampId) this.stampRetryAfter.set(stampId, Date.now() + this.stampRetryDelayMs);
   }
 }
