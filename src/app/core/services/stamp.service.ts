@@ -48,17 +48,30 @@ export class StampService {
     const stampId = this.stampMap.get(stampName);
     if (!stampId) return null;
 
-    if (this.stampCache.has(stampId)) {
-      return this.stampCache.get(stampId)!;
+    const cached = this.stampCache.get(stampId);
+    if (cached) {
+      if (cached.staticImage?.complete && cached.staticImage.naturalWidth === 0) {
+        this.evictStamp(stampId, cached);
+        return null;
+      }
+      return cached;
     }
-
     const cacheEntry: AnimatedStampData = { isAnimated: false };
     this.stampCache.set(stampId, cacheEntry);
 
     this.http
-      .get(`${this.traQApiUrl}/${stampId}/image`, { responseType: 'arraybuffer' })
+      .get(`${this.traQApiUrl}/${stampId}/image`, {
+        responseType: 'arraybuffer',
+        observe: 'response',
+      })
       .subscribe({
-        next: async (buffer) => {
+        next: async (response) => {
+          const buffer = response.body;
+          if (!buffer) {
+            this.evictStamp(stampId, cacheEntry);
+            return;
+          }
+          const contentType = response.headers.get('Content-Type') ?? '';
           if (this.isGifFormat(buffer)) {
             try {
               const gif = parseGIF(buffer);
@@ -91,10 +104,10 @@ export class StampService {
           }
 
           // 静止画(PNG/JPEG等)
-          this.createStaticImageFromBuffer(buffer, cacheEntry);
+          this.createStaticImageFromBuffer(buffer, stampId, cacheEntry, contentType);
         },
         error: () => {
-          this.stampCache.delete(stampId);
+          this.evictStamp(stampId, cacheEntry);
         },
       });
     return cacheEntry;
@@ -128,12 +141,25 @@ export class StampService {
     return header[0] === 0x47 && header[1] === 0x49 && header[2] === 0x46;
   }
 
-  private createStaticImageFromBuffer(buffer: ArrayBuffer, cacheEntry: AnimatedStampData) {
-    const blob = new Blob([buffer]);
+  private createStaticImageFromBuffer(
+    buffer: ArrayBuffer,
+    stampId: string,
+    cacheEntry: AnimatedStampData,
+    contentType: string,
+  ) {
+    const blob = new Blob([buffer], { type: contentType });
     const objectUrl = URL.createObjectURL(blob);
     const img = new Image();
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      this.evictStamp(stampId, cacheEntry);
+    };
     img.src = objectUrl;
     cacheEntry.isAnimated = false;
     cacheEntry.staticImage = img;
+  }
+
+  private evictStamp(stampId: string, cacheEntry: AnimatedStampData): void {
+    if (this.stampCache.get(stampId) === cacheEntry) this.stampCache.delete(stampId);
   }
 }
