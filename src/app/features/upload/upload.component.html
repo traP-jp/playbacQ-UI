@@ -41,7 +41,7 @@
 				<form [formGroup]="videoForm">
 					@if (isImporting){
 					<mat-form-field appearance="outline" class="full-width">
-						<mat-label>動画のリンク</mat-label>
+						<mat-label>動画のリンク (必須)</mat-label>
 						<input matInput formControlName="url" placeholder="https://www.youtube.com/watch?v=..."
 							required>
 					</mat-form-field>
@@ -61,6 +61,60 @@
 						<mat-label>動画の説明</mat-label>
 						<textarea matInput formControlName="description" rows="5" class="no-resize"></textarea>
 					</mat-form-field>
+					@if (isImporting) {
+					<mat-expansion-panel class="advanced-settings-panel">
+						<mat-expansion-panel-header>
+							<mat-panel-title>
+								詳細設定
+							</mat-panel-title>
+							<mat-panel-description>
+								Live動画のみに適用されます
+							</mat-panel-description>
+						</mat-expansion-panel-header>
+						<div class="traq-checkbox-row">
+							<mat-checkbox formControlName="enableTraQ" color="primary">
+								traQからのメッセージ転送を有効にする
+							</mat-checkbox>
+						</div>
+						@if (videoForm.controls.enableTraQ.value) {
+						<mat-form-field appearance="outline" class="full-width">
+							<mat-label>転送元のtraQチャンネル</mat-label>
+							<span matTextPrefix>#&nbsp;</span>
+							<input type="text" matInput formControlName="traqChannel" [matAutocomplete]="channelAuto"
+								[placeholder]="defaultTraqChannel">
+							<mat-autocomplete #channelAuto="matAutocomplete" [displayWith]="displayChannel">
+								@for (channel of filteredChannels(); track channel.id) {
+								<mat-option [value]="channel">
+									#{{ channel.path }}
+								</mat-option>
+								}
+							</mat-autocomplete>
+							<mat-hint>空欄の場合はデフォルトチャンネル( #{{ defaultTraqChannel }} ) が使用されます</mat-hint>
+						</mat-form-field>
+						<div class="delay-section">
+							<div class="delay-header">
+								<mat-checkbox formControlName="enableDelay" color="primary">
+									遅延を考慮する
+								</mat-checkbox>
+								<span class="delay-value"
+									[class.disabled-text]="videoForm.controls.delaySeconds.disabled">
+									遅延時間:
+									{{ videoForm.controls.enableDelay.value ? videoForm.controls.delaySeconds.value + '
+									秒' : '0 秒（即時）' }}
+								</span>
+							</div>
+							@if (videoForm.controls.enableDelay.value) {
+							<mat-slider min="0" max="60" step="0.1" discrete class="full-width">
+								<input matSliderThumb formControlName="delaySeconds">
+							</mat-slider>
+							<p class="delay-hint">
+								配信の遅延に合わせてメッセージ転送のタイミングを遅らせます（目安: 10〜30秒）
+							</p>
+							}
+						</div>
+						}
+					</mat-expansion-panel>
+					}
 
 					<div class="button-actions">
 						<button mat-stroked-button matStepperPrevious type="button">戻る</button>

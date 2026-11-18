@@ -1,9 +1,13 @@
-import { Component, inject, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, ViewChild, ChangeDetectorRef, computed, OnInit } from '@angular/core';
 import { VideoService } from '../../core/services/video.service';
 import { UploadService } from '../../core/services/upload.service';
 import { MatStepperModule, MatStepper } from '@angular/material/stepper';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSliderModule } from '@angular/material/slider';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatExpansionModule } from '@angular/material/expansion';
 import {
   FormGroup,
   FormControl,
@@ -17,6 +21,8 @@ import { MatIcon } from '@angular/material/icon';
 import { HttpEventType } from '@angular/common/http';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { switchMap, tap, filter } from 'rxjs/operators';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TraQChannel } from '../../core/models/traQchannel.model';
 
 @Component({
   selector: 'app-upload',
@@ -29,13 +35,17 @@ import { switchMap, tap, filter } from 'rxjs/operators';
     FormsModule,
     ReactiveFormsModule,
     MatProgressBarModule,
+    MatCheckboxModule,
+    MatAutocompleteModule,
+    MatSliderModule,
+    MatExpansionModule,
     MatDialogModule,
     MatIcon,
   ],
   templateUrl: './upload.component.html',
   styleUrls: ['./upload.component.css'],
 })
-export class UploadComponent {
+export class UploadComponent implements OnInit {
   private videoService = inject(VideoService);
   private uploadService = inject(UploadService);
   private changeDetector = inject(ChangeDetectorRef);
@@ -50,15 +60,87 @@ export class UploadComponent {
   uploadStatusMessage: string = '';
   uploadedVideoUrl: string = '';
   importedVideoTitle: string = '';
+  traqChannel: string = '';
+  enableTraQ = false;
+  enableDelay = false;
+  delaySeconds: number = 15.0;
   @ViewChild('stepper') private stepper!: MatStepper;
 
   steps = ['動画の選択', '基本情報の入力', 'アップロード', '完了'];
+  readonly defaultTraqChannel = 'gps/onair';
+  readonly defaultTraqChannelId = '89994a57-2f6e-4ce0-a841-226d02369ee3';
+  readonly defaultDelaySeconds = 15; // YouTube Liveの標準的な遅延目安
+  private defaultChannelObj: TraQChannel | null = null;
 
   videoForm = new FormGroup({
     url: new FormControl('', { nonNullable: true }),
     title: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     description: new FormControl('', { nonNullable: true }),
+    enableTraQ: new FormControl(true, { nonNullable: true }),
+    traqChannel: new FormControl(this.defaultTraqChannel, { nonNullable: true }),
+    enableDelay: new FormControl(true, { nonNullable: true }),
+    delaySeconds: new FormControl(15.0, { nonNullable: true }),
   });
+
+  private channels = toSignal(
+    this.uploadService.getTraQChannels().pipe(
+      tap((list) => {
+        const defaultCh = list.find((ch) => ch.path === this.defaultTraqChannel) ?? null;
+        if (!this.videoForm.controls.traqChannel.value && defaultCh) {
+          this.videoForm.controls.traqChannel.setValue(defaultCh.path);
+        }
+      }),
+    ),
+    { initialValue: [] as TraQChannel[] },
+  );
+
+  private channelQuery = toSignal(this.videoForm.controls.traqChannel.valueChanges, {
+    initialValue: this.videoForm.controls.traqChannel.value,
+  });
+
+  filteredChannels = computed(() => {
+    const list = this.channels();
+    const query = this.channelQuery();
+
+    const keyword = (query ?? '').trim().replace(/^#/, '').toLowerCase();
+
+    if (!keyword) {
+      return list.slice(0, 50);
+    }
+    const terms = keyword.split(/\s+/);
+    return list
+      .filter((ch) => {
+        const lowerName = ch.path.toLowerCase();
+        return terms.every((term) => lowerName.includes(term));
+      })
+      .slice(0, 50);
+  });
+
+  private syncTraqControlStates() {
+    const traqEnabled = this.videoForm.controls.enableTraQ.value;
+    const delayEnabled = this.videoForm.controls.enableDelay.value;
+
+    if (!traqEnabled) {
+      this.videoForm.controls.traqChannel.disable({ emitEvent: false });
+      this.videoForm.controls.enableDelay.disable({ emitEvent: false });
+      this.videoForm.controls.delaySeconds.disable({ emitEvent: false });
+      return;
+    }
+
+    this.videoForm.controls.traqChannel.enable({ emitEvent: false });
+    this.videoForm.controls.enableDelay.enable({ emitEvent: false });
+
+    if (delayEnabled) {
+      this.videoForm.controls.delaySeconds.enable({ emitEvent: false });
+    } else {
+      this.videoForm.controls.delaySeconds.disable({ emitEvent: false });
+    }
+  }
+
+  ngOnInit() {
+    this.videoForm.controls.enableTraQ.valueChanges.subscribe(() => this.syncTraqControlStates());
+    this.videoForm.controls.enableDelay.valueChanges.subscribe(() => this.syncTraqControlStates());
+  }
 
   onDragOver(event: DragEvent) {
     event.preventDefault();
@@ -113,6 +195,11 @@ export class UploadComponent {
     });
   }
 
+  displayChannel(channel: TraQChannel | string | null): string {
+    if (!channel) return '';
+    return typeof channel === 'string' ? channel : channel.path;
+  }
+
   importFromYouTube() {
     this.isImporting = true;
     this.selectedFile = null;
@@ -134,21 +221,32 @@ export class UploadComponent {
     // 外部からインポート
     if (this.isImporting) {
       this.isUploadStarted = true;
-      const { title, description, url } = this.videoForm.getRawValue();
+      const { title, description, url, enableTraQ, traqChannel, enableDelay, delaySeconds } =
+        this.videoForm.getRawValue();
+      // TODO: Channel ID取得
+      if (!enableTraQ) {
+        this.traqChannel = '';
+        this.delaySeconds = 0;
+      }
+      if (!enableDelay) {
+        this.delaySeconds = 0;
+      }
       setTimeout(() => {
         this.stepper.next();
-        this.videoService.uploadExVideo(title, description, url).subscribe({
-          next: (video) => {
-            this.importedVideoTitle = video.title;
-            this.uploadStatusMessage = 'アップロードが完了しました！';
-            this.stepper.next();
-          },
-          error: (err) => {
-            console.error('通信エラーが発生しました…', err);
-            alert('動画の作成に失敗しました。もう一度お試しください。');
-            this.stepper.previous();
-          },
-        });
+        this.videoService
+          .uploadExVideo(title, description, url, traqChannel, delaySeconds)
+          .subscribe({
+            next: (video) => {
+              this.importedVideoTitle = video.title;
+              this.uploadStatusMessage = 'アップロードが完了しました！';
+              this.stepper.next();
+            },
+            error: (err) => {
+              console.error('通信エラーが発生しました…', err);
+              alert('動画の作成に失敗しました。もう一度お試しください。');
+              this.stepper.previous();
+            },
+          });
       });
       return;
     }

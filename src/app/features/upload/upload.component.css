@@ -83,3 +83,41 @@ button:active {
 .import-link:hover {
   color: #115293;
 }
+
+.advanced-settings-panel {
+  margin-bottom: 16px;
+  box-shadow: none !important;
+  border: 1px solid light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.12));
+}
+
+.traq-checkbox-row {
+  margin-bottom: 12px;
+}
+
+.delay-section {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.08));
+}
+
+.delay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.delay-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.delay-value.disabled-text {
+  color: light-dark(rgba(0, 0, 0, 0.38), rgba(255, 255, 255, 0.38));
+}
+
+.delay-hint {
+  margin: -4px 0 0;
+  font-size: 0.78rem;
+  color: light-dark(#666, #aaa);
+}
