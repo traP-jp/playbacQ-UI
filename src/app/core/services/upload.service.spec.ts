@@ -32,4 +32,28 @@ describe('UploadService', () => {
     expect(req.request.headers.get('Content-Type')).toBe('video/mp4');
     req.flush({}, { status: 200, statusText: 'OK' });
   });
+
+  it('should fetch TraQ channels', () => {
+    const mockChannels = [
+      { id: '1', name: 'Channel 1' },
+      { id: '2', name: 'Channel 2' },
+    ];
+    service.getTraQChannels().subscribe((channels) => {
+      expect(channels).toEqual(mockChannels);
+    });
+
+    const req = httpTestingController.expectOne(`${service['apiUrl']}/traq-api/channels`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockChannels);
+  });
+
+  it('should return empty array if TraQ channels API returns null', () => {
+    service.getTraQChannels().subscribe((channels) => {
+      expect(channels).toEqual([]);
+    });
+
+    const req = httpTestingController.expectOne(`${service['apiUrl']}/traq-api/channels`);
+    expect(req.request.method).toBe('GET');
+    req.flush(null);
+  });
 });

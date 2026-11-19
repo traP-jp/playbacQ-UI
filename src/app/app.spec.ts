@@ -205,4 +205,21 @@ describe('App', () => {
     uploadButtonDebug.triggerEventHandler('click', null);
     expect(openDialogSpy).toHaveBeenCalled();
   });
+
+  it('should close user menu when home-btn or uploaded-videos-btn is clicked', () => {
+    app.iconUrl = 'blob:mock-url';
+    app.isOpenUserMenu = true;
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    const homeButtonDebug = fixture.debugElement.query(By.css('.home-btn'));
+    homeButtonDebug.triggerEventHandler('click', { button: 0 });
+    expect(app.isOpenUserMenu).toBe(false);
+
+    app.isOpenUserMenu = true;
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    const uploadedVideosButtonDebug = fixture.debugElement.query(By.css('.uploaded-videos-btn'));
+    uploadedVideosButtonDebug.triggerEventHandler('click', { button: 0 });
+    expect(app.isOpenUserMenu).toBe(false);
+  });
 });

@@ -79,20 +79,14 @@ export class UploadComponent implements OnInit {
     /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})(?:\S+)?$/;
 
   videoForm = new FormGroup({
-    url: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.pattern(this.youtubeUrlPattern)],
-    }),
+    url: new FormControl('', { nonNullable: true }),
     title: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required],
     }),
     description: new FormControl('', { nonNullable: true }),
     enableTraQ: new FormControl(true, { nonNullable: true }),
-    traqChannel: new FormControl(this.defaultTraqChannel, {
-      nonNullable: true,
-      validators: [(control) => this.isValidChannel(control)],
-    }),
+    traqChannel: new FormControl(this.defaultTraqChannel, { nonNullable: true }),
     enableDelay: new FormControl(true, { nonNullable: true }),
     delaySeconds: new FormControl(15.0, { nonNullable: true }),
   });
@@ -215,6 +209,7 @@ export class UploadComponent implements OnInit {
     this.videoForm.controls.url.updateValueAndValidity();
     this.videoForm.controls.title.setValidators([Validators.required]);
     this.videoForm.controls.title.updateValueAndValidity();
+    this.videoForm.controls.traqChannel.setValidators([(control) => this.isValidChannel(control)]);
 
     // 画面の更新を待ってから次のステップに進む
     setTimeout(() => {
