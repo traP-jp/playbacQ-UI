@@ -20,6 +20,7 @@ describe('UploadComponent', () => {
     };
     const mockUploadService = {
       uploadToMinio: vi.fn(),
+      getTraQChannels: vi.fn().mockReturnValue(of([])),
     };
     await TestBed.configureTestingModule({
       imports: [UploadComponent],

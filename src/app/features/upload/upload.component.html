@@ -1,4 +1,4 @@
-<div class="upload-container">
+<div class="upload-container" cdkScrollable>
 	<div style="display: flex; justify-content: space-between; align-items: center;">
 		<h2>動画のアップロード</h2>
 		<button mat-icon-button color="warn" class="close-btn" mat-dialog-close title="閉じる">
@@ -85,7 +85,7 @@
 							<mat-autocomplete #channelAuto="matAutocomplete" [displayWith]="displayChannel">
 								@for (channel of filteredChannels(); track channel.id) {
 								<mat-option [value]="channel">
-									#{{ channel.path }}
+									#{{ channel.name }}
 								</mat-option>
 								}
 							</mat-autocomplete>

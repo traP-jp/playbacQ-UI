@@ -1,6 +1,7 @@
 .upload-container {
   padding: 20px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: auto;
 }
 
 /* ドロップゾーンの基本スタイル */

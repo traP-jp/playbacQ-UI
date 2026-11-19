@@ -1,4 +1,4 @@
 export interface TraQChannel {
-	path: string;
+	name: string;
 	id: string;
 }
