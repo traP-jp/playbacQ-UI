@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { PLATFORM_ID } from '@angular/core';
 import { ThemeService } from './theme.service';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
@@ -27,6 +28,17 @@ describe('ThemeService', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     localStorage.clear();
+    document.documentElement.style.colorScheme = '';
+  });
+
+  it('should update document colorScheme based on isDarkMode', () => {
+    service = TestBed.inject(ThemeService);
+    TestBed.tick();
+    expect(document.documentElement.style.colorScheme).toBe('light');
+
+    service.isDarkMode.set(true);
+    TestBed.tick();
+    expect(document.documentElement.style.colorScheme).toBe('dark');
   });
 
   it('should initialized Light mode', () => {
@@ -115,5 +127,42 @@ describe('ThemeService', () => {
     service.resetTheme();
     expect(removeItemSpy).toHaveBeenCalledWith('theme');
     expect(service.isDarkMode()).toBe(false);
+  });
+});
+
+describe('ThemeService (non-browser)', () => {
+  let service: ThemeService;
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [ThemeService, { provide: PLATFORM_ID, useValue: 'server' }],
+    });
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+  it('should not access window or localStorage on server', () => {
+    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem');
+    const matchMediaSpy = vi.spyOn(window, 'matchMedia');
+    service = TestBed.inject(ThemeService);
+    expect(service.isDarkMode()).toBe(false);
+    // ブラウザ固有の API が呼ばれていないことを検証
+    expect(getItemSpy).not.toHaveBeenCalled();
+    expect(matchMediaSpy).not.toHaveBeenCalled();
+  });
+  it('should not access localStorage on server when toggling theme', () => {
+    service = TestBed.inject(ThemeService);
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    service.toggleTheme();
+
+    expect(service.isDarkMode()).toBe(true);
+    expect(setItemSpy).not.toHaveBeenCalled();
+  });
+  it('should not access localStorage on server when resetting theme', () => {
+    service = TestBed.inject(ThemeService);
+    const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem');
+    const matchMediaSpy = vi.spyOn(window, 'matchMedia');
+    service.resetTheme();
+    expect(removeItemSpy).not.toHaveBeenCalled();
+    expect(matchMediaSpy).not.toHaveBeenCalled();
   });
 });
