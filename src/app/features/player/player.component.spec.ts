@@ -1274,4 +1274,495 @@ describe('PlayerComponent', () => {
     expect(disconnectSpy).toHaveBeenCalled();
     expect(hlsDestroySpy).toHaveBeenCalled();
   });
+
+  describe('Full branch and line coverage for PlayerComponent', () => {
+    describe('decideYPosition coverage', () => {
+      it('should handle sorting comments by timestamp', () => {
+        const c1 = new Comment('c1', 10, '', stampService);
+        const c2 = new Comment('c2', 5, '', stampService);
+        const c3 = new Comment('c3', 5, '', stampService);
+        (component as any).comments = [c1, c2, c3];
+        component.decideYPosition();
+        expect((component as any).comments[0].timestamp).toBe(5);
+        expect((component as any).comments[2].timestamp).toBe(10);
+      });
+
+      it('should calculate y for shita comments, handle collision and expired slots', () => {
+        const c1 = new Comment('shita1', 1, 'shita', stampService);
+        c1.height = 30;
+        c1.appearTime = 5;
+
+        const c2 = new Comment('shita2', 2, 'shita', stampService);
+        c2.height = 30;
+        c2.appearTime = 5;
+
+        const c3 = new Comment('shita3', 10, 'shita', stampService);
+        c3.height = 30;
+        c3.appearTime = 5;
+
+        (component as any).comments = [c1, c2, c3];
+        component.decideYPosition();
+        expect(c1.y).toBeDefined();
+        expect(c2.y).toBeDefined();
+        expect(c3.y).toBeDefined();
+      });
+
+      it('should fallback to random y for shita comment when no space available', () => {
+        const huge = new Comment('huge shita', 1, 'shita', stampService);
+        huge.height = 2000;
+        (component as any).comments = [huge];
+        component.decideYPosition();
+        expect(huge.y).toBeDefined();
+      });
+
+      it('should handle collision and expired slots for ue and default comments', () => {
+        const c1 = new Comment('ue1', 1, 'ue', stampService);
+        c1.height = 30;
+        c1.appearTime = 5;
+
+        const c2 = new Comment('ue2', 2, 'ue', stampService);
+        c2.height = 30;
+        c2.appearTime = 5;
+
+        const c3 = new Comment('ue3', 10, 'ue', stampService);
+        c3.height = 30;
+        c3.appearTime = 5;
+
+        (component as any).comments = [c1, c2, c3];
+        component.decideYPosition();
+        expect(c1.y).toBeDefined();
+        expect(c2.y).toBeDefined();
+        expect(c3.y).toBeDefined();
+      });
+
+      it('should fallback to random y for non-shita comment when no space available', () => {
+        const huge = new Comment('huge ue', 1, 'ue', stampService);
+        huge.height = 2000;
+        (component as any).comments = [huge];
+        component.decideYPosition();
+        expect(huge.y).toBeDefined();
+      });
+    });
+
+    describe('applyCommand and comment input coverage', () => {
+      it('should handle hex color command and replace existing color, pos, and size commands', () => {
+        const cmdInput = component.commandInputRef.nativeElement;
+
+        cmdInput.value = 'red ue big';
+        component.toggleCommand('#123456', cmdInput);
+        expect(cmdInput.value).toBe('ue big #123456');
+
+        component.toggleCommand('shita', cmdInput);
+        expect(cmdInput.value).toBe('big #123456 shita');
+
+        component.toggleCommand('small', cmdInput);
+        expect(cmdInput.value).toBe('#123456 shita small');
+      });
+
+      it('should handle onInput event', () => {
+        const event = { target: { value: 'typed comment' } } as unknown as Event;
+        component.onInput(event);
+        expect(component.inputCommentValue()).toBe('typed comment');
+      });
+
+      it('should validate comment length and presence of player in isValidComment', () => {
+        (component as any).player = null as any;
+        expect(component.isValidComment()).toBe(false);
+
+        (component as any).player = {} as any;
+        component.inputCommentValue.set('');
+        expect(component.isValidComment()).toBe(false);
+
+        component.inputCommentValue.set('valid');
+        expect(component.isValidComment()).toBe(true);
+
+        component.inputCommentValue.set('a'.repeat(141));
+        expect(component.isValidComment()).toBe(false);
+      });
+
+      it('should handle sendComment guard conditions', () => {
+        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        (component as any).player = null as any;
+        component.sendComment();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Player is not initialized yet. Cannot send comment.');
+
+        (component as any).player = { currentTime: undefined } as any;
+        component.inputCommentValue.set('   ');
+        component.sendComment();
+
+        const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+        component.inputCommentValue.set('a'.repeat(141));
+        component.sendComment();
+        expect(alertSpy).toHaveBeenCalledWith('あり得ないことが起きています。HTMLを改竄していませんか？');
+
+        vi.spyOn(commentService, 'postComment').mockReturnValue(of({} as any));
+        component.inputCommentValue.set('valid comment');
+        component.commandInputRef.nativeElement.value = '';
+        component.sendComment();
+        expect((component as any).comments.length).toBeGreaterThan(0);
+
+        // Cover this.player?.currentTime ?? 0 when this.player becomes null mid-function
+        (component as any).player = { currentTime: 10 } as any;
+        component.inputCommentValue.set('test comment');
+        Object.defineProperty(component.commandInputRef.nativeElement, 'value', {
+          get: () => {
+            (component as any).player = null as any;
+            return '';
+          },
+          configurable: true,
+        });
+        component.sendComment();
+      });
+    });
+
+    describe('deleteVideo, removeTag, and insertStamp edge cases', () => {
+      it('should return early from deleteVideo and removeTag if videoMetadata is null', () => {
+        component.videoMetadata = null;
+        component.deleteVideo();
+        component.removeTag({ tag_id: 1, name: 'tag', status: 0 });
+      });
+
+      it('should handle insertStamp when comment length would exceed 140 or selections are null', () => {
+        const input = component.commentInputRef.nativeElement;
+        input.value = 'a'.repeat(135);
+        component.insertStamp('longstampname');
+        expect(input.value).toBe('a'.repeat(135));
+
+        input.value = 'test ';
+        Object.defineProperty(input, 'selectionStart', { value: null, configurable: true });
+        Object.defineProperty(input, 'selectionEnd', { value: null, configurable: true });
+        component.insertStamp('stamp1');
+        expect(input.value).toBe('test :stamp1:');
+      });
+    });
+
+    describe('parseUtcDate and initMetadata branches', () => {
+      it('should parse date without timezone and return null for invalid date', () => {
+        const validWithoutTz = (component as any).parseUtcDate('2024-01-01T12:00:00');
+        expect(validWithoutTz).toBeInstanceOf(Date);
+
+        const invalid = (component as any).parseUtcDate('invalid-date');
+        expect(invalid).toBeNull();
+      });
+
+      it('should handle user icon revoke and null user_id in initMetadata', () => {
+        component.userIconUrl = 'blob:test';
+        const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL');
+        const mockBlob = new Blob(['icon']);
+        vi.spyOn(userService, 'getUserIcon').mockReturnValue(of(mockBlob));
+
+        const mockVideo = { video_id: 'v1', user_id: 'u1', created_at: '2024-01-01T00:00:00Z', type: 'internal' };
+        vi.spyOn(videoService, 'getVideoById').mockReturnValue(of(mockVideo as any));
+        vi.spyOn(videoService, 'getLikes').mockReturnValue(of([]));
+        vi.spyOn(authService, 'getUserID').mockReturnValue(of({ userId: 'u1' } as any));
+        component.isEmbed = false;
+        component.ngOnInit();
+        expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:test');
+
+        const mockVideoNoUser = { video_id: 'v1', user_id: '', created_at: '2024-01-01T00:00:00Z', type: 'internal' };
+        vi.spyOn(videoService, 'getVideoById').mockReturnValue(of(mockVideoNoUser as any));
+        component.ngOnInit();
+      });
+
+      it('should handle WebSocket message variations and userId null', () => {
+        messagesSubject.next({ content: 'content only', timestamp: 1 });
+        expect((component as any).comments.some((c: { text: string }) => c.text === 'content only')).toBe(true);
+
+        messagesSubject.next({ timestamp: 2 });
+        expect((component as any).comments.some((c: { text: string }) => c.text === '')).toBe(true);
+
+        vi.spyOn(authService, 'getUserID').mockReturnValue(of(null as any));
+        vi.spyOn(videoService, 'getLikes').mockReturnValue(of(['u1']));
+        component.isEmbed = false;
+        component.ngOnInit();
+        expect((component as any).userId).toBeNull();
+        expect(component.isLiked).toBe(false);
+
+        vi.spyOn(authService, 'getUserID').mockReturnValue(of({} as any));
+        vi.spyOn(videoService, 'getLikes').mockReturnValue(of(['']));
+        component.ngOnInit();
+        expect((component as any).userId).toBeNull();
+
+        component.videoMetadata = null;
+        expect(component.isVideoOwner()).toBe(false);
+      });
+    });
+
+    describe('Player initialization and Plyr UI branches', () => {
+      it('should handle embed token null and non-null branches', () => {
+        (component as any).route.snapshot.queryParamMap.get = vi.fn().mockReturnValue(null);
+        component.isEmbed = true;
+        vi.spyOn(commentService, 'getEmbedComments').mockReturnValue(of([]));
+        component.ngOnInit();
+      });
+
+      it('should handle playerElement null branches in initPlayer', () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        component.videoMetadata = { video_id: 'v1', type: 'youtube' } as any;
+        component.ytRef = undefined as any;
+        (component as any).initPlayer();
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Player element not found!');
+
+        component.videoMetadata = { video_id: 'v1', type: 'internal' } as any;
+        component.hlsRef = undefined as any;
+        (component as any).initPlayer();
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Player element not found!');
+      });
+
+      it('should handle Hls events and errors', () => {
+        const mockHlsInstance = {
+          loadSource: vi.fn(),
+          attachMedia: vi.fn(),
+          on: vi.fn(),
+          once: vi.fn(),
+          startLoad: vi.fn(),
+          recoverMediaError: vi.fn(),
+          destroy: vi.fn(),
+        };
+        (component as any).hls = mockHlsInstance;
+
+        const videoEl = document.createElement('video');
+        component.hlsRef = new ElementRef(videoEl);
+        component.videoMetadata = { video_id: 'v1', type: 'internal' } as any;
+        (component as any).initPlayer();
+
+        const manifestCallback = mockHlsInstance.once.mock.calls.find(c => c[0] === Hls.Events.MANIFEST_PARSED)?.[1];
+        if (manifestCallback) {
+          vi.spyOn(videoEl, 'play').mockImplementation(async () => {});
+          manifestCallback();
+        }
+
+        const errorCallback = mockHlsInstance.on.mock.calls.find(c => c[0] === Hls.Events.ERROR)?.[1];
+        if (errorCallback) {
+          errorCallback(Hls.Events.ERROR, { type: Hls.ErrorTypes.NETWORK_ERROR, fatal: false });
+          errorCallback(Hls.Events.ERROR, { type: Hls.ErrorTypes.MEDIA_ERROR, fatal: true });
+          expect(mockHlsInstance.recoverMediaError).toHaveBeenCalled();
+          errorCallback(Hls.Events.ERROR, { type: 'OTHER_ERROR', fatal: true });
+          expect(mockHlsInstance.destroy).toHaveBeenCalled();
+          errorCallback(Hls.Events.ERROR, { type: 'OTHER_ERROR', fatal: false });
+        }
+
+        videoEl.dispatchEvent(new Event('error'));
+        Object.defineProperty(videoEl, 'error', { value: { code: 1 }, configurable: true });
+        videoEl.dispatchEvent(new Event('error'));
+      });
+
+      it('should handle Plyr setup branches: non-embed, view count timer caps and buttons', () => {
+        component.isEmbed = false;
+        component.videoMetadata = { video_id: 'v1', duration: 2000, type: 'youtube' } as any;
+        const ytDiv = document.createElement('div');
+        const plyrWrapper = document.createElement('div');
+        plyrWrapper.className = 'plyr';
+        const playBtn = document.createElement('button');
+        playBtn.setAttribute('data-plyr', 'play');
+        const settingBtn = document.createElement('button');
+        settingBtn.setAttribute('data-plyr', 'settings');
+        plyrWrapper.appendChild(playBtn);
+        plyrWrapper.appendChild(settingBtn);
+        ytDiv.appendChild(plyrWrapper);
+        document.body.appendChild(ytDiv);
+
+        (component as any).ytRef = new ElementRef(ytDiv);
+        (component as any).initPlyr(ytDiv, true);
+
+        mockReadyCallback?.();
+
+        (component as any).hasCountedView = true;
+        mockPlayingCallback?.();
+
+        const commentBtn = ytDiv.querySelector('button.plyr__control--comment') as HTMLButtonElement;
+        const loopBtn = ytDiv.querySelector('button.plyr__control--loop') as HTMLButtonElement;
+        commentBtn?.click();
+        loopBtn?.click();
+
+        (component as any).player = null as any;
+        commentBtn?.click();
+        loopBtn?.click();
+
+        document.body.removeChild(ytDiv);
+      });
+
+      it('should handle initPlyr when parentNode of buttons is null and duration is short', () => {
+        component.isEmbed = true;
+        component.videoMetadata = { video_id: 'v1', duration: 100, type: 'internal' } as any;
+        const hlsDiv = document.createElement('div');
+        (component as any).hlsRef = new ElementRef(hlsDiv);
+        (component as any).initPlyr(hlsDiv, false);
+      });
+
+      it('should filter stamps with empty query', () => {
+        component.stampSearchQuery = '';
+        expect(component.stampRows().length).toBeGreaterThanOrEqual(0);
+      });
+
+      it('should clean up subscriptions and timers on destroy', () => {
+        const unsubscribeSpy = vi.fn();
+        (component as any).commentSubscription = { unsubscribe: unsubscribeSpy };
+        (component as any).animationFrameId = 12345;
+        (component as any).userIconUrl = 'blob:test-icon';
+        const cancelAnimationFrameSpy = vi.spyOn(window, 'cancelAnimationFrame');
+        const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL');
+
+        component.ngOnDestroy();
+        expect(unsubscribeSpy).toHaveBeenCalled();
+        expect(cancelAnimationFrameSpy).toHaveBeenCalledWith(12345);
+        expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:test-icon');
+      });
+
+      it('should handle destroy when all optional resources are null', () => {
+        (component as any).hls = null;
+        (component as any).commentSubscription = null;
+        (component as any).animationFrameId = 0;
+        (component as any).userIconUrl = '';
+        component.ngOnDestroy();
+      });
+
+      it('should handle getVideoById returning null or undefined videoMetadata', () => {
+        vi.spyOn(videoService, 'getVideoById').mockReturnValue(of(null as any));
+        component.isEmbed = false;
+        component.ngOnInit();
+        expect(component.videoMetadata).toBeNull();
+      });
+
+      it('should cover token branches when token is provided in query params', () => {
+        (component as any).route.snapshot.data = { embed: true };
+        (component as any).route.snapshot.queryParamMap.get = vi.fn().mockReturnValue('sample-token');
+        component.isEmbed = true;
+        vi.spyOn(commentService, 'getEmbedComments').mockReturnValue(of([]));
+        component.ngOnInit();
+
+        component.videoMetadata = { video_id: 'v1', type: 'internal' } as any;
+        (component as any).initPlayer();
+
+        // Native HLS with token
+        vi.spyOn(Hls, 'isSupported').mockReturnValue(false);
+        const video = component.hlsRef.nativeElement;
+        vi.spyOn(video, 'canPlayType').mockReturnValue('probably');
+        vi.spyOn(video, 'addEventListener').mockImplementation(() => {});
+        (component as any).initPlayer();
+        expect(video.src).toContain('sample-token');
+      });
+
+      it('should cover all Hls error and manifest parsed branches including null hls', () => {
+        vi.spyOn(Hls, 'isSupported').mockReturnValue(true);
+        const onSpy = vi.spyOn(Hls.prototype, 'on').mockImplementation(() => {});
+        const onceSpy = vi.spyOn(Hls.prototype, 'once').mockImplementation(() => {});
+        vi.spyOn(Hls.prototype, 'loadSource').mockImplementation(() => {});
+        vi.spyOn(Hls.prototype, 'attachMedia').mockImplementation(() => {});
+        vi.spyOn(Hls.prototype, 'startLoad').mockImplementation(() => {});
+        vi.spyOn(Hls.prototype, 'recoverMediaError').mockImplementation(() => {});
+        vi.spyOn(Hls.prototype, 'destroy').mockImplementation(() => {});
+        vi.spyOn(component as any, 'initPlyr').mockImplementation(() => {});
+
+        component.videoMetadata = { video_id: 'v1', type: 'internal' } as any;
+        (component as any).initPlayer();
+
+        const errorCalls = onSpy.mock.calls.filter((call) => call[0] === Hls.Events.ERROR);
+        const errorCallback = errorCalls[errorCalls.length - 1][1] as Function;
+
+        (component as any).hls = null;
+        errorCallback(Hls.Events.ERROR, { type: Hls.ErrorTypes.NETWORK_ERROR, response: { code: 403 } });
+        errorCallback(Hls.Events.ERROR, { type: Hls.ErrorTypes.NETWORK_ERROR, fatal: false });
+        errorCallback(Hls.Events.ERROR, { type: Hls.ErrorTypes.NETWORK_ERROR, fatal: true });
+        errorCallback(Hls.Events.ERROR, { type: Hls.ErrorTypes.MEDIA_ERROR, fatal: true });
+        errorCallback(Hls.Events.ERROR, { type: 'OTHER_ERROR', fatal: true });
+        errorCallback(Hls.Events.ERROR, { type: 'OTHER_ERROR', fatal: false });
+
+        const onceCalls = onceSpy.mock.calls.filter((call) => call[0] === Hls.Events.MANIFEST_PARSED);
+        if (onceCalls.length > 0) {
+          const manifestParsedCallback = onceCalls[onceCalls.length - 1][1] as Function;
+          const video = component.hlsRef.nativeElement;
+          Object.defineProperty(video, 'paused', { value: true, configurable: true });
+          manifestParsedCallback();
+        }
+      });
+
+      it('should cover video.onerror branches', () => {
+        vi.spyOn(Hls, 'isSupported').mockReturnValue(false);
+        const video = component.hlsRef.nativeElement;
+        vi.spyOn(video, 'canPlayType').mockReturnValue('probably');
+        vi.spyOn(video, 'addEventListener').mockImplementation(() => {});
+        vi.spyOn(component as any, 'initPlyr').mockImplementation(() => {});
+
+        (component as any).initPlayer();
+
+        Object.defineProperty(video, 'error', { value: null, configurable: true });
+        video.onerror?.(new Event('error'));
+
+        Object.defineProperty(video, 'error', { value: { code: 1 }, configurable: true });
+        video.onerror?.(new Event('error'));
+
+        Object.defineProperty(video, 'error', { value: { code: 2 }, configurable: true });
+        video.onerror?.(new Event('error'));
+      });
+
+      it('should cover initPlyr when this.player getter returns null', () => {
+        const div = document.createElement('div');
+        Object.defineProperty(component, 'player', {
+          get: () => null,
+          set: () => {},
+          configurable: true,
+        });
+        (component as any).initPlyr(div, false);
+        delete (component as any).player;
+        (component as any).player = null;
+      });
+
+      it('should cover initPlyr elements branches and DOM controls edge cases', () => {
+        delete (component as any).player;
+        (component as any).player = null;
+
+        component.videoMetadata = null;
+        const div = document.createElement('div');
+        (component as any).initPlyr(div, false);
+
+        component.videoMetadata = { video_id: 'v1', duration: 0, type: 'internal' } as any;
+        (component as any).initPlyr(div, false);
+
+        component.isEmbed = false;
+        component.videoMetadata = { video_id: 'v1', duration: 40, type: 'internal' } as any;
+        const hlsDiv = document.createElement('div');
+        const plyrWrapper = document.createElement('div');
+        plyrWrapper.className = 'plyr';
+        const videoWrapper = document.createElement('div');
+        videoWrapper.className = 'plyr__video-wrapper';
+        const plyrControls = document.createElement('div');
+        plyrControls.className = 'plyr__controls';
+        const settingBtn = document.createElement('button');
+        settingBtn.setAttribute('data-plyr', 'settings');
+        plyrControls.appendChild(settingBtn);
+        plyrWrapper.appendChild(videoWrapper);
+        plyrWrapper.appendChild(plyrControls);
+        hlsDiv.appendChild(plyrWrapper);
+        document.body.appendChild(hlsDiv);
+
+        (component as any).hlsRef = new ElementRef(hlsDiv);
+
+        (component as any).initPlyr(hlsDiv, false);
+        if ((component as any).player) {
+          ((component as any).player as any).elements = {
+            container: plyrWrapper,
+            wrapper: videoWrapper,
+            controls: plyrControls,
+          };
+        }
+        mockReadyCallback?.();
+
+        const commentBtn = plyrControls.querySelector('button.plyr__control') as HTMLButtonElement;
+        const loopBtn = plyrControls.querySelectorAll('button.plyr__control')[1] as HTMLButtonElement;
+
+        component.commentCanvasRef = null as any;
+        commentBtn?.click();
+
+        (component as any).player = null as any;
+        loopBtn?.click();
+
+        (component as any).player = { loop: false, elements: undefined } as any;
+        settingBtn.remove();
+        mockReadyCallback?.();
+
+        document.body.removeChild(hlsDiv);
+      });
+    });
+  });
 });

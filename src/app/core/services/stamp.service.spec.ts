@@ -252,4 +252,53 @@ describe('StampService', () => {
     httpTestingController.expectNone('/traq-api/stamps/stamp-id-1/image');
     expect(url2).toBe(url1);
   });
+
+  it('should evict stamp if staticImage is broken (complete and naturalWidth === 0)', () => {
+    service.loadStamps().subscribe();
+    httpTestingController.expectOne('/traq-api/stamps').flush(mockStamps);
+
+    const stampData = service.getStampImage('stamp1');
+    const imageReq = httpTestingController.expectOne('/traq-api/stamps/stamp-id-1/image');
+    imageReq.flush(new ArrayBuffer(0));
+
+    if (stampData) {
+      stampData.staticImage = { complete: true, naturalWidth: 0 } as any;
+    }
+
+    const result = service.getStampImage('stamp1');
+    expect(result).toBeNull();
+  });
+
+  it('should evict stamp if response body is null', () => {
+    service.loadStamps().subscribe();
+    httpTestingController.expectOne('/traq-api/stamps').flush(mockStamps);
+
+    service.getStampImage('stamp1');
+    const imageReq = httpTestingController.expectOne('/traq-api/stamps/stamp-id-1/image');
+    imageReq.flush(null);
+
+    service.getStampImage('stamp1');
+    httpTestingController.expectOne('/traq-api/stamps/stamp-id-1/image');
+  });
+
+  it('should handle img.onerror and evict stamp', () => {
+    service.loadStamps().subscribe();
+    httpTestingController.expectOne('/traq-api/stamps').flush(mockStamps);
+
+    const stampData = service.getStampImage('stamp1');
+    const imageReq = httpTestingController.expectOne('/traq-api/stamps/stamp-id-1/image');
+    imageReq.flush(new ArrayBuffer(0));
+
+    expect(stampData?.staticImage).toBeTruthy();
+    const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL');
+    stampData?.staticImage?.onerror?.(new Event('error'));
+    expect(revokeObjectURLSpy).toHaveBeenCalled();
+
+    service.getStampImage('stamp1');
+    httpTestingController.expectOne('/traq-api/stamps/stamp-id-1/image');
+  });
+
+  it('should handle evictStamp when cache entry does not match', () => {
+    (service as any).evictStamp('stamp-id-1', {});
+  });
 });

@@ -448,4 +448,152 @@ describe('UploadComponent', () => {
       expect((component as any).isValidChannel(control)).toEqual({ invalidChannel: true });
     });
   });
+
+  describe('TraQ controls and channels coverage', () => {
+    it('displayChannel should return correct string', () => {
+      expect(component.displayChannel(null)).toBe('');
+      expect(component.displayChannel('general')).toBe('general');
+      expect(component.displayChannel({ id: '1', name: 'gps/onair' })).toBe('gps/onair');
+    });
+
+    it('syncTraqControlStates should toggle controls based on enableTraQ and enableDelay', () => {
+      component.videoForm.controls.enableTraQ.setValue(false);
+      expect(component.videoForm.controls.traqChannel.disabled).toBe(true);
+      expect(component.videoForm.controls.enableDelay.disabled).toBe(true);
+      expect(component.videoForm.controls.delaySeconds.disabled).toBe(true);
+
+      component.videoForm.controls.enableTraQ.setValue(true);
+      component.videoForm.controls.enableDelay.setValue(true);
+      expect(component.videoForm.controls.traqChannel.enabled).toBe(true);
+      expect(component.videoForm.controls.enableDelay.enabled).toBe(true);
+      expect(component.videoForm.controls.delaySeconds.enabled).toBe(true);
+
+      component.videoForm.controls.enableDelay.setValue(false);
+      expect(component.videoForm.controls.delaySeconds.disabled).toBe(true);
+    });
+
+    it('filteredChannels should filter channels by keyword', () => {
+      (component as any).channels = () => [
+        { id: '1', name: 'general' },
+        { id: '2', name: 'gps/onair' },
+        { id: '3', name: 'random/chat' },
+      ];
+
+      component.videoForm.controls.traqChannel.setValue('');
+      expect(component.filteredChannels().length).toBe(3);
+
+      component.videoForm.controls.traqChannel.setValue('#gps onair');
+      expect(component.filteredChannels()).toEqual([{ id: '2', name: 'gps/onair' }]);
+    });
+
+    it('validator set on traqChannel in handleFile should be called', () => {
+      component.enableTraQ = true;
+      (component as any).channels = () => [{ id: '1', name: 'general' }];
+      const mockFile = new File(['dummy'], 'test.mp4', { type: 'video/mp4' });
+      (component as any).handleFile(mockFile);
+
+      component.videoForm.controls.traqChannel.setValue('invalid-channel');
+      expect(component.videoForm.controls.traqChannel.errors).toEqual({ invalidChannel: true });
+    });
+
+    it('fast upload external video with enableTraQ false and enableDelay false', async () => {
+      component.isImporting = true;
+      component.videoForm.controls.title.setValue('Test Video');
+      component.videoForm.controls.description.setValue('Test Description');
+      component.videoForm.controls.url.setValue('http://example.com/video.mp4');
+      component.videoForm.controls.enableTraQ.setValue(false);
+      component.videoForm.controls.enableDelay.setValue(false);
+
+      const uploadExSpy = vi.spyOn(videoService, 'uploadExVideo').mockReturnValue(
+        of({
+          title: 'Test Video',
+          description: 'Test Description',
+          video_url: 'http://example.com/video.mp4',
+        } as any),
+      );
+
+      component.startUpload();
+      await vi.runAllTimersAsync();
+
+      expect(uploadExSpy).toHaveBeenCalledWith(
+        'Test Video',
+        'Test Description',
+        'http://example.com/video.mp4',
+        (component as any).defaultTraqChannelId,
+        15.0,
+      );
+      expect((component as any).traqChannel).toBe('');
+      expect((component as any).delaySeconds).toBe(0);
+    });
+
+    it('fast upload external video with matched traq channel', async () => {
+      component.isImporting = true;
+      component.videoForm.controls.title.setValue('Test Video');
+      component.videoForm.controls.description.setValue('Test Description');
+      component.videoForm.controls.url.setValue('http://example.com/video.mp4');
+      component.videoForm.controls.enableTraQ.setValue(true);
+      component.videoForm.controls.enableDelay.setValue(true);
+      (component as any).channels = () => [{ id: 'custom-id', name: 'custom-ch' }];
+      component.videoForm.controls.traqChannel.setValue('custom-ch');
+
+      const uploadExSpy = vi.spyOn(videoService, 'uploadExVideo').mockReturnValue(
+        of({
+          title: 'Test Video',
+          description: 'Test Description',
+          video_url: 'http://example.com/video.mp4',
+        } as any),
+      );
+
+      component.startUpload();
+      await vi.runAllTimersAsync();
+
+      expect(uploadExSpy).toHaveBeenCalledWith(
+        'Test Video',
+        'Test Description',
+        'http://example.com/video.mp4',
+        'custom-id',
+        15.0,
+      );
+    });
+
+    it('should set default channel when empty and channel list arrives', () => {
+      const channelSubject = new Subject<any[]>();
+      const mockUploadService = {
+        uploadToMinio: vi.fn(),
+        getTraQChannels: vi.fn().mockReturnValue(channelSubject.asObservable()),
+      };
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [UploadComponent],
+        providers: [
+          { provide: VideoService, useValue: { createVideo: vi.fn(), pollUploadProgress: vi.fn(), uploadExVideo: vi.fn() } },
+          { provide: UploadService, useValue: mockUploadService },
+        ],
+      });
+      const fix = TestBed.createComponent(UploadComponent);
+      fix.componentInstance.videoForm.controls.traqChannel.setValue('');
+      channelSubject.next([{ id: 'ch-gps', name: 'gps/onair' }]);
+      expect(fix.componentInstance.videoForm.controls.traqChannel.value).toBe('gps/onair');
+    });
+
+    it('should not set default channel if channel list does not contain default channel', () => {
+      const channelSubject = new Subject<any[]>();
+      const mockUploadService = {
+        uploadToMinio: vi.fn(),
+        getTraQChannels: vi.fn().mockReturnValue(channelSubject.asObservable()),
+      };
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [UploadComponent],
+        providers: [
+          { provide: VideoService, useValue: { createVideo: vi.fn(), pollUploadProgress: vi.fn(), uploadExVideo: vi.fn() } },
+          { provide: UploadService, useValue: mockUploadService },
+        ],
+      });
+      const fix = TestBed.createComponent(UploadComponent);
+      fix.componentInstance.videoForm.controls.traqChannel.setValue('');
+      channelSubject.next([{ id: 'ch-other', name: 'other' }]);
+      expect(fix.componentInstance.videoForm.controls.traqChannel.value).toBe('');
+    });
+  });
 });
