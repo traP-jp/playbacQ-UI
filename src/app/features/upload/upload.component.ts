@@ -1,13 +1,20 @@
-import { Component, inject, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, ViewChild, ChangeDetectorRef, computed, OnInit } from '@angular/core';
 import { VideoService } from '../../core/services/video.service';
 import { UploadService } from '../../core/services/upload.service';
 import { MatStepperModule, MatStepper } from '@angular/material/stepper';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSliderModule } from '@angular/material/slider';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { CdkScrollable } from '@angular/cdk/scrolling';
+import { MatExpansionModule } from '@angular/material/expansion';
 import {
+  AbstractControl,
   FormGroup,
   FormControl,
   FormsModule,
+  ValidationErrors,
   Validators,
   ReactiveFormsModule,
 } from '@angular/forms';
@@ -17,6 +24,8 @@ import { MatIcon } from '@angular/material/icon';
 import { HttpEventType } from '@angular/common/http';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { switchMap, tap, filter } from 'rxjs/operators';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TraQChannel } from '../../core/models/traQchannel.model';
 
 @Component({
   selector: 'app-upload',
@@ -29,13 +38,18 @@ import { switchMap, tap, filter } from 'rxjs/operators';
     FormsModule,
     ReactiveFormsModule,
     MatProgressBarModule,
+    MatCheckboxModule,
+    CdkScrollable,
+    MatAutocompleteModule,
+    MatSliderModule,
+    MatExpansionModule,
     MatDialogModule,
     MatIcon,
   ],
   templateUrl: './upload.component.html',
   styleUrls: ['./upload.component.css'],
 })
-export class UploadComponent {
+export class UploadComponent implements OnInit {
   private videoService = inject(VideoService);
   private uploadService = inject(UploadService);
   private changeDetector = inject(ChangeDetectorRef);
@@ -50,15 +64,104 @@ export class UploadComponent {
   uploadStatusMessage: string = '';
   uploadedVideoUrl: string = '';
   importedVideoTitle: string = '';
+  traqChannel: string = '';
+  enableTraQ = true;
+  enableDelay = false;
+  delaySeconds: number = 15.0;
   @ViewChild('stepper') private stepper!: MatStepper;
 
   steps = ['動画の選択', '基本情報の入力', 'アップロード', '完了'];
+  readonly defaultTraqChannel = 'gps/onair';
+  readonly defaultTraqChannelId = '89994a57-2f6e-4ce0-a841-226d02369ee3';
+  readonly defaultDelaySeconds = 15; // YouTube Liveの標準的な遅延目安
+
+  readonly youtubeUrlPattern =
+    /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})(?:\S+)?$/;
 
   videoForm = new FormGroup({
     url: new FormControl('', { nonNullable: true }),
-    title: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    title: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
     description: new FormControl('', { nonNullable: true }),
+    enableTraQ: new FormControl(true, { nonNullable: true }),
+    traqChannel: new FormControl(this.defaultTraqChannel, { nonNullable: true }),
+    enableDelay: new FormControl(true, { nonNullable: true }),
+    delaySeconds: new FormControl(15.0, { nonNullable: true }),
   });
+
+  private isValidChannel(control: AbstractControl): ValidationErrors | null {
+    if (!this.channels) return null;
+    if (!this.enableTraQ) return null;
+    const value = (typeof control.value === 'string' ? control.value : control.value?.name) ?? '';
+    if (value.trim() === '') return null;
+    if (this.channels().some((ch) => ch.name === value)) {
+      return null;
+    }
+    return { invalidChannel: true };
+  }
+
+  private channels = toSignal(
+    this.uploadService.getTraQChannels().pipe(
+      tap((list) => {
+        const defaultCh = list.find((ch) => ch.name === this.defaultTraqChannel) ?? null;
+        if (!this.videoForm.controls.traqChannel.value && defaultCh) {
+          this.videoForm.controls.traqChannel.setValue(defaultCh.name);
+        }
+      }),
+    ),
+    { initialValue: [] as TraQChannel[] },
+  );
+
+  private channelQuery = toSignal(this.videoForm.controls.traqChannel.valueChanges, {
+    initialValue: this.videoForm.controls.traqChannel.value,
+  });
+
+  filteredChannels = computed(() => {
+    const list = this.channels();
+    const query = this.channelQuery();
+
+    const rawQuery = this.displayChannel(query);
+    const keyword = rawQuery.trim().replace(/^#/, '').toLowerCase();
+
+    if (!keyword) {
+      return list.slice(0, 50);
+    }
+    const terms = keyword.split(/\s+/);
+    return list
+      .filter((ch) => {
+        const lowerName = ch.name.toLowerCase();
+        return terms.every((term) => lowerName.includes(term));
+      })
+      .slice(0, 50);
+  });
+
+  private syncTraqControlStates() {
+    const traqEnabled = this.videoForm.controls.enableTraQ.value;
+    const delayEnabled = this.videoForm.controls.enableDelay.value;
+
+    if (!traqEnabled) {
+      this.videoForm.controls.traqChannel.disable({ emitEvent: false });
+      this.videoForm.controls.enableDelay.disable({ emitEvent: false });
+      this.videoForm.controls.delaySeconds.disable({ emitEvent: false });
+      return;
+    }
+
+    this.videoForm.controls.traqChannel.enable({ emitEvent: false });
+    this.videoForm.controls.enableDelay.enable({ emitEvent: false });
+
+    if (delayEnabled) {
+      this.videoForm.controls.delaySeconds.enable({ emitEvent: false });
+    } else {
+      this.videoForm.controls.delaySeconds.disable({ emitEvent: false });
+    }
+  }
+
+  ngOnInit() {
+    this.videoForm.controls.enableTraQ.valueChanges.subscribe(() => this.syncTraqControlStates());
+    this.videoForm.controls.enableDelay.valueChanges.subscribe(() => this.syncTraqControlStates());
+  }
 
   onDragOver(event: DragEvent) {
     event.preventDefault();
@@ -106,11 +209,17 @@ export class UploadComponent {
     this.videoForm.controls.url.updateValueAndValidity();
     this.videoForm.controls.title.setValidators([Validators.required]);
     this.videoForm.controls.title.updateValueAndValidity();
+    this.videoForm.controls.traqChannel.setValidators([(control) => this.isValidChannel(control)]);
 
     // 画面の更新を待ってから次のステップに進む
     setTimeout(() => {
       this.stepper.next();
     });
+  }
+
+  displayChannel(channel: TraQChannel | string | null): string {
+    if (!channel) return '';
+    return typeof channel === 'string' ? channel : channel.name;
   }
 
   importFromYouTube() {
@@ -119,7 +228,10 @@ export class UploadComponent {
     // インポート時は url を必須、title を任意にする
     this.videoForm.controls.title.clearValidators();
     this.videoForm.controls.title.updateValueAndValidity();
-    this.videoForm.controls.url.setValidators([Validators.required]);
+    this.videoForm.controls.url.setValidators([
+      Validators.required,
+      Validators.pattern(this.youtubeUrlPattern),
+    ]);
     this.videoForm.controls.url.updateValueAndValidity();
 
     setTimeout(() => {
@@ -134,10 +246,22 @@ export class UploadComponent {
     // 外部からインポート
     if (this.isImporting) {
       this.isUploadStarted = true;
-      const { title, description, url } = this.videoForm.getRawValue();
+      const { title, description, url, enableTraQ, traqChannel, enableDelay, delaySeconds } =
+        this.videoForm.getRawValue();
+      let channlId = this.defaultTraqChannelId;
+      if (enableTraQ) {
+        channlId =
+          this.channels().find((ch) => ch.name === traqChannel)?.id ?? this.defaultTraqChannelId;
+      } else {
+        this.traqChannel = '';
+        this.delaySeconds = 0;
+      }
+      if (!enableDelay) {
+        this.delaySeconds = 0;
+      }
       setTimeout(() => {
         this.stepper.next();
-        this.videoService.uploadExVideo(title, description, url).subscribe({
+        this.videoService.uploadExVideo(title, description, url, channlId, delaySeconds).subscribe({
           next: (video) => {
             this.importedVideoTitle = video.title;
             this.uploadStatusMessage = 'アップロードが完了しました！';

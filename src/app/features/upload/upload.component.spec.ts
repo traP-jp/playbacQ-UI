@@ -6,6 +6,7 @@ import { vi } from 'vitest';
 import { of, Subject, throwError } from 'rxjs';
 import { By } from '@angular/platform-browser';
 import { HttpResponse, HttpEventType } from '@angular/common/http';
+import { FormControl } from '@angular/forms';
 
 describe('UploadComponent', () => {
   let component: UploadComponent;
@@ -20,6 +21,7 @@ describe('UploadComponent', () => {
     };
     const mockUploadService = {
       uploadToMinio: vi.fn(),
+      getTraQChannels: vi.fn().mockReturnValue(of([])),
     };
     await TestBed.configureTestingModule({
       imports: [UploadComponent],
@@ -386,5 +388,64 @@ describe('UploadComponent', () => {
     expect(alertSpy).toHaveBeenCalledWith('動画の作成に失敗しました。もう一度お試しください。');
     expect((component as any).stepper.selectedIndex).toBe(1);
     alertSpy.mockRestore();
+  });
+
+  describe('isValidChannel', () => {
+    it('should return null if channels signal is not available', () => {
+      (component as any).channels = null;
+      const control = new FormControl('test-channel');
+      expect((component as any).isValidChannel(control)).toBeNull();
+    });
+
+    it('should return null if enableTraQ is false', () => {
+      component.enableTraQ = false;
+      const control = new FormControl('unknown-channel');
+      expect((component as any).isValidChannel(control)).toBeNull();
+    });
+
+    it('should return null if value is empty or only whitespace', () => {
+      component.enableTraQ = true;
+      (component as any).channels = () => [{ id: '1', name: 'gps/onair' }];
+      expect((component as any).isValidChannel(new FormControl(''))).toBeNull();
+      expect((component as any).isValidChannel(new FormControl('   '))).toBeNull();
+      expect((component as any).isValidChannel(new FormControl(null))).toBeNull();
+    });
+
+    it('should return null if value exists in channels (string value)', () => {
+      component.enableTraQ = true;
+      (component as any).channels = () => [
+        { id: '1', name: 'general' },
+        { id: '2', name: 'gps/onair' },
+      ];
+      const control = new FormControl('general');
+      expect((component as any).isValidChannel(control)).toBeNull();
+    });
+
+    it('should return null if value exists in channels (object value with name)', () => {
+      component.enableTraQ = true;
+      (component as any).channels = () => [
+        { id: '1', name: 'general' },
+        { id: '2', name: 'gps/onair' },
+      ];
+      const control = new FormControl({ id: '2', name: 'gps/onair' });
+      expect((component as any).isValidChannel(control)).toBeNull();
+    });
+
+    it('should return { invalidChannel: true } if channel does not exist in channels list (string value)', () => {
+      component.enableTraQ = true;
+      (component as any).channels = () => [
+        { id: '1', name: 'general' },
+        { id: '2', name: 'gps/onair' },
+      ];
+      const control = new FormControl('unknown-channel');
+      expect((component as any).isValidChannel(control)).toEqual({ invalidChannel: true });
+    });
+
+    it('should return { invalidChannel: true } if channel does not exist in channels list (object value)', () => {
+      component.enableTraQ = true;
+      (component as any).channels = () => [{ id: '1', name: 'general' }];
+      const control = new FormControl({ id: '99', name: 'nonexistent' });
+      expect((component as any).isValidChannel(control)).toEqual({ invalidChannel: true });
+    });
   });
 });

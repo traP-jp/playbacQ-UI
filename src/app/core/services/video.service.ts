@@ -44,8 +44,8 @@ export class VideoService {
     return this.http.post<Video>(this.apiUrl, { title, description, content_type });
   }
 
-  uploadExVideo(title: string, description: string, url: string): Observable<Video> {
-    return this.http.post<Video>(`${this.apiBaseUrl}/api/ex-videos`, { title, description, url });
+  uploadExVideo(title: string, description: string, url: string, channelId: string, delay: number): Observable<Video> {
+    return this.http.post<Video>(`${this.apiBaseUrl}/api/ex-videos`, { title, description, url, channelId, delay });
   }
 
   getVideoTags(id: string): Observable<Tag[]> {
